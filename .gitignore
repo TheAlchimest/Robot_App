@@ -224,7 +224,7 @@ htmlcov/
 .coverage
 
 # Local development files
-local_*
+#local_*
 dev_*
 test_output/
 
