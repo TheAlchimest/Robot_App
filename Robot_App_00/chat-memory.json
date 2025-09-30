@@ -9,6 +9,14 @@
         {
             "user_input": "Okay, nice story.",
             "ai_response": "Dear user, I'm glad you enjoyed it!"
+        },
+        {
+            "user_input": "Hello?",
+            "ai_response": "Dear user, Salim, your personal AI assistant, is here to help you."
+        },
+        {
+            "user_input": "Hi, how are you? Hello?",
+            "ai_response": "Dear user, I'm here and ready to assist you."
         }
     ]
 }
