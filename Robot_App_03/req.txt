@@ -1,0 +1,23 @@
+# Core AI & Speech Libraries
+openai==1.57.4
+elevenlabs==2.16.0
+
+# Audio Processing
+pyaudio==0.2.14
+pygame==2.6.1
+SpeechRecognition==3.12.0
+
+# Computer Vision (if face tracking is used)
+opencv-python==4.10.0.84
+cvzone==1.6.1
+mediapipe==0.10.21
+
+# Serial Communication (if Arduino is used)
+pyserial==3.5
+
+# Environment & Configuration
+python-dotenv==1.0.1
+
+# Optional: For better performance
+# numpy>=1.24.0
+# scipy>=1.10.0

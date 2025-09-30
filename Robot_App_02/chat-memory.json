@@ -1,0 +1,18 @@
+{
+  "Important": [
+    {
+      "user_input": "أحتاق مراقبة الإيميلات",
+      "ai_response": "عزيزي، سأساعدك في مراقبة الإيميلات بإعطائك نصائح حول كيفية إدارتها بفعالية."
+    },
+    {
+      "user_input": "I'm very tired.",
+      "ai_response": "I'm sorry to hear that you're feeling tired; it's important to take care of yourself and rest when needed."
+    }
+  ],
+  "Not Important": [
+    {
+      "user_input": "We will look into that. We'll have to talk about it. I'm here for you. If you like. To see how they do that, then we should.",
+      "ai_response": "Thank you for your support; let's discuss it further when you're ready."
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+# Conversation url 
+https://chatgpt.com/c/68c67860-9474-832a-a504-55f58fff3e2b
+
+# Solution
+
+ولو الإعداد موجود على مستوى النظام (مثل /etc/pip.conf في RPi OS):
+
+sudo sed -i.bak '/piwheels/d' /etc/pip.conf
+
+بعدها:
+
+python -m pip install --no-cache-dir -r req.txt
+
+ملاحظات مفيدة
+
+تحديث certifi داخل الـ venv مهم لأنه المسؤول عن حزمة شهادات CA التي يستخدمها pip.
+
+لو اضطرّيت (مؤقتًا فقط) تقدر تتجاوز التحقق—غير مُستحسن أمنيًا:
+
+python -m pip install -r req.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org --trusted-host www.piwheels.org --trusted-host archive1.piwheels.org
