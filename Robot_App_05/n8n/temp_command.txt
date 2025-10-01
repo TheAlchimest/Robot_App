@@ -1,0 +1,44 @@
+
+raspberrypi.local
+pi
+23072009
+Gaafar
+EndGlobal@5050
+
+ssh pi@192.168.8.127
+exit
+
+sudo raspi-config
+
+https://angryip.org/download
+https://sourceforge.net/projects/tigervnc/
+#Raspberry Pi Hotspot
+RaspberryPi_Hotspot
+23072009
+sudo apt update
+sudo apt upgrade
+sudo reboot
+
+
+------------------------
+https://chatgpt.com/c/68d3e728-8844-8326-9ad7-b37984e5ba45
+
+cd /home/pi/Downloads/Python-3.10.0
+
+./configure
+./configure --enable-optimizations
+
+make -j 4
+
+sudo make altinstall
+
+
+elevenlabs
+sk_820bbb7769d9f7dbd6e2ed0a8265071bf3e96f50fe370773
+
+
+ 
+
+
+
+
