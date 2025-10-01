@@ -1,0 +1,10 @@
+py -3.10 -m venv .venv
+.venv\Scripts\Activate
+pip install -r req.txt
+paython main.py
+
+
+source .venv/bin/activate
+
+
+https://chatgpt.com/c/68d3e728-8844-8326-9ad7-b37984e5ba45

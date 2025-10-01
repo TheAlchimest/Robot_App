@@ -27,6 +27,8 @@ class Config:
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
         self.OPEN_AI_API_KEY = os.getenv("OPEN_AI_API_KEY")
         self.ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+       #n8n Url 
+        self.N8N_URL = os.getenv("N8N_URL")
 
         # Display Settings (for face tracking if used)
         self.SCREEN_WIDTH = int(os.getenv("SCREEN_WIDTH", "1920"))

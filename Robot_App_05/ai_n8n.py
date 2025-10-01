@@ -6,13 +6,14 @@ import json
 config = Config()
 
 session_id = config.DEVICE_ID
+n8n_url = config.N8N_URL
 
 def chat(message):
     """Optimized chat function"""
     if not message:
         return ""
     
-    url = "http://localhost:5678/webhook/chat"
+    url = n8n_url
     headers = {
         "Content-Type": "application/json"
     }
