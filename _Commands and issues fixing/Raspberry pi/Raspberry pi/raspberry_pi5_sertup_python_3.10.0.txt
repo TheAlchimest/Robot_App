@@ -1,8 +1,11 @@
 ﻿
+----------------------------------------------------------
 ##Raspberry Pi OS (Bookworm) بييجي غالبًا مع Python 3.11. لو كودك compatible مع ≥3.10:
 ## تثبيت Python 3.10 بالضبط عبر pyenv
 ##ده يضمن نسخة 3.10 بدون ما “تكسّر” بايثون النظام.
 
+## https://chatgpt.com/g/g-p-68dbef6461388191b5abbcda5304f3d3-raspberry-pi/c/68de3258-df10-8329-9ced-09262216e6b4
+----------------------------------------------------------
 # تحديث النظام وأدوات البناء
 sudo apt update && sudo apt full-upgrade -y
 sudo apt install -y git curl build-essential \
@@ -39,3 +42,96 @@ pip install -r requirements.txt
 # شغّل
 python your_app.py
 
+----------------------------------------------------------
+# Aditional notes
+----------------------------------------------------------
+ملاحظات مهمة للـ Zero 2 WH (رام 512MB):
+
+أثناء بناء حزَم ثقيلة (زي numpy, pandas, أو opencv-python) ممكن تحتاج Swap أكبر لتفادي فشل البناء:
+
+# زوّد السواب مؤقتًا إلى 1GB مثلاً
+sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=1024/' /etc/dphys-swapfile
+sudo dphys-swapfile setup
+sudo dphys-swapfile swapon
+# بعد التثبيت ارجع 100MB مثلاً لتقليل تآكل الكارت:
+# sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=100/' /etc/dphys-swapfile && sudo dphys-swapfile setup && sudo dphys-swapfile swapon
+
+----------------------------------------------------------
+
+لو مشروعك بيستخدم OpenCV:
+
+أخف اختيار: pip install opencv-python-headless==4.10.0.84
+
+أو استخدم حزمة النظام (أسرع تثبيت لكن مربوطة ببايثون النظام):
+sudo apt install -y python3-opencv
+
+للصوت/المايك:
+sudo apt install -y portaudio19-dev && pip install pyaudio
+أو لـ SpeechRecognition: تأكد من ffmpeg و sox لو بتحتاجهم:
+
+sudo apt install -y ffmpeg sox
+
+----------------------------------------------------------
+
+حل مشاكل شائعة بسرعة
+
+SSL: CERTIFICATE_VERIFY_FAILED أثناء pip:
+
+sudo timedatectl set-ntp true
+sudo apt install -y --reinstall ca-certificates
+sudo update-ca-certificates
+
+----------------------------------------------------------
+
+pip يشتكي من صيغة باكدج (زي python-dotenv==):
+
+لازم تحط رقم نسخة كامل:
+pip install python-dotenv==1.0.1
+
+بطء/أخطاء بناء wheels:
+استخدم piwheels (أعلى)، وزوّد Swap مؤقتًا، أو دوّر على بدائل أخف.
+
+----------------------------------------------------------
+
+تشغيل تلقائي عند الإقلاع (اختياري)
+
+لو عايز سكربتك يشتغل تلقائيًا:
+
+# ملف خدمة systemd
+sudo nano /etc/systemd/system/myproject.service
+
+
+ضع:
+
+[Unit]
+Description=My Python 3.10 App
+After=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/apps/myproject
+Environment="PATH=/home/pi/apps/myproject/.venv/bin"
+ExecStart=/home/pi/apps/myproject/.venv/bin/python /home/pi/apps/myproject/your_app.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+
+ثم:
+
+sudo systemctl daemon-reload
+sudo systemctl enable myproject --now
+sudo systemctl status myproject
+
+----------------------------------------------------------
+
+لو تحب، ابعَتلي:
+
+محتويات requirements.txt
+
+طريقة تشغيل مشروعك (python main.py ولا uvicorn… إلخ)
+
+وهل شغال على Bookworm ولا Bullseye
+
+وأظبطهولك على مقاس الـ Zero 2 WH خطوة بخطوة. 💪🐍📟
