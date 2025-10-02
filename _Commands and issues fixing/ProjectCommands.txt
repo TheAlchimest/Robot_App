@@ -1,10 +1,17 @@
+=========================
+Windows
+=========================
 py -3.10 -m venv .venv
 .venv\Scripts\Activate
 pip install -r req.txt
 paython main.py
 
-
+=========================
+RPI or Linux
+=========================
+pip install -r req.txt
 source .venv/bin/activate
+paython main.py
 
+=========================
 
-https://chatgpt.com/c/68d3e728-8844-8326-9ad7-b37984e5ba45
