@@ -1,0 +1,41 @@
+﻿
+##Raspberry Pi OS (Bookworm) بييجي غالبًا مع Python 3.11. لو كودك compatible مع ≥3.10:
+## تثبيت Python 3.10 بالضبط عبر pyenv
+##ده يضمن نسخة 3.10 بدون ما “تكسّر” بايثون النظام.
+
+# تحديث النظام وأدوات البناء
+sudo apt update && sudo apt full-upgrade -y
+sudo apt install -y git curl build-essential \
+  libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev \
+  libffi-dev liblzma-dev tk-dev libncursesw5-dev xz-utils
+
+# تثبيت pyenv للمستخدم pi
+curl https://pyenv.run | bash
+
+# اربط pyenv بالشل (bash):
+echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.bashrc
+echo 'eval "$(pyenv init -)"'               >> ~/.bashrc
+echo 'eval "$(pyenv virtualenv-init -)"'    >> ~/.bashrc
+exec $SHELL  # أو اعمل logout/login
+
+# نزّل Python 3.10 (اختَر آخر patch من السلسلة 3.10)
+pyenv install 3.10.0
+
+# أنشئ فولدر للمشروع وفيرتشوال إنف على 3.10
+mkdir -p ~/apps/myproject && cd ~/apps/myproject
+pyenv local 3.10.0
+python -m venv .venv
+source .venv/bin/activate
+
+# pip سريع + piwheels
+python -m pip install --upgrade pip
+pip config set global.index-url https://www.piwheels.org/simple
+pip config set global.extra-index-url https://pypi.org/simple
+
+# انسخ المشروع وثبّت الاعتمادات
+git clone <YOUR_REPO_URL> .   # أو انسخ الملفات
+pip install -r requirements.txt
+
+# شغّل
+python your_app.py
+
