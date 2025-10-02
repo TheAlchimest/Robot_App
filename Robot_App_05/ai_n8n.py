@@ -28,7 +28,6 @@ def chat(message):
         
         # حل: استخدم response.json() بدل content
         data = response.json()
-        print(data)              # يطبع الديكشنري كامل
         print(data["output"])    # يطبع النص اللي راجع
         
         return data["output"]
