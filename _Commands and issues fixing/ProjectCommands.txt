@@ -14,4 +14,10 @@ source .venv/bin/activate
 python main.py
 
 =========================
+Configured Rasp 
+=========================
+cd ~/apps/Robot_App
+source .venv/bin/activate
+python main.py
+=========================
 
