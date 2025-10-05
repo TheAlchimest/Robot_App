@@ -8,6 +8,7 @@ import threading
 from queue import Queue, Empty
 import time
 from local_commands import handle_local_command
+import face_tracker as tracker
 
 # Create objects
 recorder = AudioRecorder()
@@ -223,7 +224,8 @@ def main():
         threading.Thread(target=speech_to_text_thread, daemon=True, name="SpeechToText"),
         threading.Thread(target=ai_processing_thread, daemon=True, name="AIProcessor"),
         threading.Thread(target=text_to_speech_thread, daemon=True, name="TextToSpeech"),
-        threading.Thread(target=status_monitor_thread, daemon=True, name="StatusMonitor")
+        threading.Thread(target=status_monitor_thread, daemon=True, name="StatusMonitor"),
+        threading.Thread(target=tracker.trackUserFace, name="FaceTracker", args=(False,))
     ]
     
     for thread in threads:
@@ -243,7 +245,8 @@ def main():
         print("\n" + "=" * 60)
         print("⛔ Shutting down system...")
         system_state.stop_system()
-        tts.stop_speech()  # إيقاف أي صوت قيد التشغيل
+        tts.stop_speech() 
+        tracker.closeAllWindows()
         print("✅ System stopped successfully")
         print("=" * 60)
 
