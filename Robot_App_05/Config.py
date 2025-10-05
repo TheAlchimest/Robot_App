@@ -85,6 +85,10 @@ class Config:
         self.DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
         self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+        # ============ Face Tracking SETTINGS ============
+        self.CAMERA_INDEX = int(os.getenv("CAMERA_INDEX", "0"))
+        self.CAMERA_FLIP = os.getenv("CAMERA_FLIP", "False").lower() == "true"
+
         # Validate critical API keys
         self._validate_keys()
 

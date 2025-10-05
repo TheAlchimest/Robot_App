@@ -1,0 +1,993 @@
+{
+  "name": "Multi-Agent System - Cleaned",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatagents2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5cde6c38-65d4-4ff3-a1a4-178dfffe862e",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        528
+      ],
+      "webhookId": "multi-agent-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// استخراج البيانات من الطلب\nconst userId = $input.first().json.body.userId || 'default_user';\nconst userMessage = $input.first().json.body.message;\n\nreturn [{\n  json: {\n    userId: userId,\n    userMessage: userMessage,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "645a3cc3-a769-4061-bfed-b1a27ba016b2",
+      "name": "Extract Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⭐ استخدام getWorkflowStaticData لحفظ الجلسات\nconst userId = $input.first().json.userId;\nconst userMessage = $input.first().json.userMessage;\n\n// 📝 هذه هي الدالة المطلوبة - تحفظ البيانات بشكل دائم\nconst staticData = $getWorkflowStaticData('global');\n\n// إنشاء object للجلسات إذا لم يكن موجود\nif (!staticData.sessions) {\n  staticData.sessions = {};\n}\n\n// إنشاء جلسة جديدة للمستخدم إذا لم تكن موجودة\nif (!staticData.sessions[userId]) {\n  staticData.sessions[userId] = {\n    userId: userId,\n    activeAgent: null,\n    agentContext: {\n      waitingForResponse: false,\n      pendingAction: null,\n      actionData: {}\n    },\n    lastMessageTime: new Date().toISOString()\n  };\n}\n\nconst session = staticData.sessions[userId];\n\n// Session Timeout - إعادة تعيين بعد 10 دقائق من عدم النشاط\nconst now = new Date();\nconst lastMessage = new Date(session.lastMessageTime);\nconst minutesSinceLastMessage = (now - lastMessage) / 60000;\n\nif (minutesSinceLastMessage > 10) {\n  session.activeAgent = null;\n  session.agentContext = {\n    waitingForResponse: false,\n    pendingAction: null,\n    actionData: {}\n  };\n}\n\nreturn [{\n  json: {\n    userId: userId,\n    userMessage: userMessage,\n    session: session,\n    sessionId: `session_${userId}`,\n    chatInput: userMessage\n  }\n}];"
+      },
+      "id": "38fc20f3-62da-422a-9985-1f0c6fdf5ca8",
+      "name": "Load Session (getWorkflowStaticData)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1040,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "aa914fa6-7fd3-4657-ae16-ad7fa0e02592",
+              "leftValue": "={{ $json.session.activeAgent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "ff29d3f6-79e9-4e0b-8b84-3d3037108c78",
+              "leftValue": "={{ $json.session.agentContext.waitingForResponse }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "eaeabc78-e0a9-4dd1-be2a-768b85b9634f",
+      "name": "Has Active Agent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "targetAgent",
+              "value": "={{ $json.session.activeAgent }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "chatInput",
+              "value": "={{ $json.userMessage }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "userId",
+              "value": "={{ $json.userId }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "session",
+              "value": "={{ $json.session }}",
+              "type": "object"
+            },
+            {
+              "id": "a5",
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0e2e85ce-4881-4475-94a3-e84857939189",
+      "name": "Use Active Agent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        0,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "أنت وكيل توجيه ذكي. حلل الرسالة وحدد الوكيل المناسب.\n\nالوكلاء المتاحين:\n- general: أسئلة عامة ومعلومات\n- email: إدارة الإيميلات (إرسال، قراءة، بحث)\n- calendar: إدارة المواعيد (جدولة، عرض، تعديل)\n\nأجب بـ JSON فقط:\n{\"agent\": \"general\", \"isNewRequest\": true}"
+        }
+      },
+      "id": "702a6a59-b910-4aef-94fa-9955c037b8b3",
+      "name": "Router Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -480,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2ddcd005-0feb-40b2-bca2-bd3e3239f049",
+      "name": "OpenAI Router",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        352
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_router"
+      },
+      "id": "a0b1193b-13da-40f8-a3fe-a118f4f527d3",
+      "name": "Memory Router",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        128
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "49d207e3-0ac2-4b1e-bcb8-68ac89ca2268",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const routerOutput = $input.first().json.output || $input.first().json.text;\nconst session = $('Load Session (getWorkflowStaticData)').first().json.session;\nconst userMessage = $('Load Session (getWorkflowStaticData)').first().json.userMessage;\nconst userId = $('Load Session (getWorkflowStaticData)').first().json.userId;\nconst sessionId = $('Load Session (getWorkflowStaticData)').first().json.sessionId;\n\nlet routerResponse;\ntry {\n  if (typeof routerOutput === 'object') {\n    routerResponse = routerOutput;\n  } else {\n    const jsonMatch = routerOutput.match(/\\{[\\s\\S]*?\\}/);\n    if (jsonMatch) {\n      routerResponse = JSON.parse(jsonMatch[0]);\n    } else {\n      throw new Error('No JSON');\n    }\n  }\n} catch (e) {\n  routerResponse = { agent: 'general', isNewRequest: true };\n}\n\nlet targetAgent;\nif (routerResponse.isNewRequest) {\n  targetAgent = routerResponse.agent;\n} else if (session.activeAgent) {\n  targetAgent = session.activeAgent;\n} else {\n  targetAgent = routerResponse.agent;\n}\n\nreturn [{\n  json: {\n    targetAgent,\n    chatInput: userMessage,\n    userId,\n    session,\n    sessionId\n  }\n}];"
+      },
+      "id": "e0706194-0c84-4181-b87a-3cdec74df26a",
+      "name": "Process Routing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "ab4d26f6-8ed3-4cef-b231-828fcd0b0560",
+                    "leftValue": "{{ $json.targetAgent }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "general"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "26f1e5d4-7da7-484d-bdd6-7daa751389c9",
+                    "leftValue": "={{ $json.targetAgent }}",
+                    "rightValue": "general",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "general"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "ddf090f4-4778-45e6-9a68-b8289844aa4c",
+                    "leftValue": "{{ $json.targetAgent }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "email"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "20412d87-a8b1-4d17-bbfc-2d9d57e95709",
+                    "leftValue": "{{ $json.targetAgent }}",
+                    "rightValue": "calendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "calendar"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "18f80ea7-4cca-4cd2-86ee-84c0a7af1d25",
+      "name": "Route to Agent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        448,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "أنت مساعد عام ذكي ومفيد. أجب على الأسئلة بوضوح واختصار."
+        }
+      },
+      "id": "7114cb91-cb96-4a64-b587-524a675580e1",
+      "name": "General Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        896,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2daa4ec5-9598-4e73-b44f-69acc567baea",
+      "name": "OpenAI General",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        816,
+        64
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_general"
+      },
+      "id": "c60f333a-f1a7-4b04-a626-e71a0da4951c",
+      "name": "Memory General",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        992,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "أنت وكيل متخصص في إدارة الإيميلات.\n\nالقواعد:\n1. اطلب المعلومات الناقصة (المستلم، الموضوع، المحتوى)\n2. قبل إرسال إيميل، اعرض ملخصاً واطلب التأكيد\n3. عند طلب تأكيد، قل \"هل تريد المتابعة؟\"\n4. عند الانتهاء، ابدأ بكلمة \"تم\"\n5. استخدم الأدوات المتاحة"
+        }
+      },
+      "id": "f51cf5de-826a-45a5-a3ee-0cf7c1307e21",
+      "name": "Email Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        960,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c2cb30dd-9d34-408b-add6-1ee2f7bf58f7",
+      "name": "OpenAI Email",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        624,
+        416
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_email"
+      },
+      "id": "ac2e4267-8b4b-463f-a71c-6bd870eb5a6c",
+      "name": "Memory Email",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $fromAI('To', '', 'string') }}",
+        "subject": "={{ $fromAI('Subject', '', 'string') }}",
+        "message": "={{ $fromAI('Message', '', 'string') }}",
+        "options": {}
+      },
+      "id": "0c4500a0-e63a-4856-9a52-42282336e3fa",
+      "name": "Tool Send Email",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        464,
+        48
+      ],
+      "webhookId": "e537487d-d26b-48c0-b7f4-e3dc5b5af936",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RkfCbJZychg6ng7j",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 10,
+        "filters": {}
+      },
+      "id": "58c2d0fa-27d2-46be-ab1b-c6b35acf26e3",
+      "name": "Tool Search Emails",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        1216,
+        144
+      ],
+      "webhookId": "068d9bfc-5c6c-4860-a468-7e3d582f4e5c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RkfCbJZychg6ng7j",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "أنت وكيل متخصص في إدارة التقويم والمواعيد.\n\nالقواعد:\n1. اطلب المعلومات الناقصة (التاريخ، الوقت، العنوان، المدة)\n2. قبل إضافة موعد، اعرض التفاصيل واطلب التأكيد\n3. عند طلب تأكيد، قل \"هل تريد إضافة هذا الموعد؟\"\n4. عند الانتهاء، ابدأ بكلمة \"تم\"\n5. استخدم الأدوات المتاحة"
+        }
+      },
+      "id": "90d415e7-389f-488d-b29c-fce8ad0c224a",
+      "name": "Calendar Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        672,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "5a4e07b5-a448-4bd0-846a-851a8b38acbf",
+      "name": "OpenAI Calendar",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        432,
+        1072
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_calendar"
+      },
+      "id": "71e80a7c-6e0a-4e22-afd9-8afdc4bb6147",
+      "name": "Memory Calendar",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $fromAI('Calendar', '', 'string') }}",
+          "mode": "id"
+        },
+        "start": "={{ $fromAI('Start', '', 'string') }}",
+        "end": "={{ $fromAI('End', '', 'string') }}",
+        "additionalFields": {}
+      },
+      "id": "7ea83832-fc5e-4eaa-9117-b838961d7904",
+      "name": "Tool Create Event",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1136,
+        1120
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Bjsel9fkEh4Cv0nT",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $fromAI('Calendar', '', 'string') }}",
+          "mode": "id"
+        },
+        "limit": "={{ $fromAI('Limit', '10', 'number') }}",
+        "options": {}
+      },
+      "id": "9819ec64-d6fc-4834-91cb-6b8fee8f8c72",
+      "name": "Tool List Events",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        416,
+        288
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Bjsel9fkEh4Cv0nT",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const agentResponse = $input.first().json.output || $input.first().json.text;\nconst inputData = $('Route to Agent').first().json;\nconst session = inputData.session;\nconst targetAgent = inputData.targetAgent;\n\nlet newAgentContext = { ...session.agentContext };\nlet keepAgentActive = false;\n\nconst responseText = agentResponse.toLowerCase();\n\n// تحليل رد الوكيل\nif (responseText.includes('هل تريد') || \n    responseText.includes('تأكيد') ||\n    responseText.includes('أرجو') ||\n    responseText.includes('أحتاج') ||\n    responseText.includes('ما هو') ||\n    responseText.includes('من فضلك') ||\n    responseText.includes('?') ||\n    responseText.includes('؟')) {\n  \n  keepAgentActive = true;\n  newAgentContext.waitingForResponse = true;\n  \n  if (responseText.includes('إيميل') || responseText.includes('email')) {\n    newAgentContext.pendingAction = 'send_email';\n  } else if (responseText.includes('موعد') || responseText.includes('اجتماع')) {\n    newAgentContext.pendingAction = 'create_event';\n  }\n  \n} else if (responseText.startsWith('تم') || \n           responseText.includes('انتهى') ||\n           responseText.includes('بنجاح')) {\n  \n  keepAgentActive = false;\n  newAgentContext = {\n    waitingForResponse: false,\n    pendingAction: null,\n    actionData: {}\n  };\n}\n\nif (inputData.chatInput.trim().length < 10) {\n  keepAgentActive = true;\n}\n\nreturn [{\n  json: {\n    response: agentResponse,\n    activeAgent: keepAgentActive ? targetAgent : null,\n    agentContext: newAgentContext,\n    userId: inputData.userId,\n    userMessage: inputData.chatInput,\n    session: session\n  }\n}];"
+      },
+      "id": "86c54713-3678-4c1f-a70d-5fea58975582",
+      "name": "Process Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⭐ استخدام getWorkflowStaticData لحفظ التحديثات\nconst staticData = $getWorkflowStaticData('global');\nconst inputData = $input.first().json;\n\n// تحديث الجلسة\nconst updatedSession = {\n  userId: inputData.userId,\n  activeAgent: inputData.activeAgent,\n  agentContext: inputData.agentContext,\n  lastMessageTime: new Date().toISOString()\n};\n\n// 📝 حفظ الجلسة المحدثة في Static Data\nif (!staticData.sessions) {\n  staticData.sessions = {};\n}\nstaticData.sessions[inputData.userId] = updatedSession;\n\nreturn [{\n  json: {\n    response: inputData.response,\n    userId: inputData.userId,\n    activeAgent: inputData.activeAgent,\n    sessionUpdated: true\n  }\n}];"
+      },
+      "id": "85fa0b91-9880-471a-8312-0edd32801c3c",
+      "name": "Update Session (getWorkflowStaticData)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"response\": $json.response, \"activeAgent\": $json.activeAgent } }}",
+        "options": {}
+      },
+      "id": "6eb839ab-6579-45b2-aa4f-4e329ae863d3",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2048,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1488,
+        288
+      ],
+      "id": "28521259-ff8e-41d0-b161-30b682afd209",
+      "name": "When chat message received",
+      "webhookId": "1e419c2e-1eb0-423d-aec5-862773fe5363"
+    },
+    {
+      "parameters": {
+        "jsCode": "const userId = $input.first().json.sessionId || 'default_user';\nconst userMessage = $input.first().json.chatInput;\n\nreturn [{\n  json: {\n    userId: userId,\n    userMessage: userMessage,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "e99ab605-cd7d-4353-91c7-5fd556e2a2f3",
+      "name": "Extract Input1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        288
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Input": {
+      "main": [
+        [
+          {
+            "node": "Load Session (getWorkflowStaticData)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Session (getWorkflowStaticData)": {
+      "main": [
+        [
+          {
+            "node": "Has Active Agent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Active Agent?": {
+      "main": [
+        [
+          {
+            "node": "Use Active Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Router Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use Active Agent": {
+      "main": [
+        [
+          {
+            "node": "Route to Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Agent": {
+      "main": [
+        [
+          {
+            "node": "Process Routing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Router": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Router": {
+      "ai_memory": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Routing": {
+      "main": [
+        [
+          {
+            "node": "Route to Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Agent": {
+      "main": [
+        [
+          {
+            "node": "General Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "General Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General Agent": {
+      "main": [
+        [
+          {
+            "node": "Process Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI General": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "General Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory General": {
+      "ai_memory": [
+        [
+          {
+            "node": "General Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Agent": {
+      "main": [
+        [
+          {
+            "node": "Process Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Email": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Email": {
+      "ai_memory": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool Send Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool Search Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Agent": {
+      "main": [
+        [
+          {
+            "node": "Process Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Calendar": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Calendar": {
+      "ai_memory": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool Create Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool List Events": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Response": {
+      "main": [
+        [
+          {
+            "node": "Update Session (getWorkflowStaticData)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Session (getWorkflowStaticData)": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Extract Input1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Input1": {
+      "main": [
+        [
+          {
+            "node": "Load Session (getWorkflowStaticData)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e1a09158-32e3-4452-8eca-c96acab8a0d8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bb3d566d8ecaecddcd7b1fe4e66f21e5379c0b4d8c972dae0b57ee62a021fec7"
+  },
+  "id": "x8Mmg77v6rKfsT5D",
+  "tags": []
+}

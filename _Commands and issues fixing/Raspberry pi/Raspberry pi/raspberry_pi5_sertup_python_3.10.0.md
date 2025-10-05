@@ -14,9 +14,7 @@ Reference: [ChatGPT Discussion](https://chatgpt.com/g/g-p-68dbef6461388191b5abbc
 
 ```bash
 sudo apt update && sudo apt full-upgrade -y
-sudo apt install -y git curl build-essential \
-  libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev \
-  libffi-dev liblzma-dev tk-dev libncursesw5-dev xz-utils
+sudo apt install -y git curl build-essential \ libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev \ libffi-dev liblzma-dev tk-dev libncursesw5-dev xz-utils
 ```
 
 ### 2. Install pyenv for User 'pi'
