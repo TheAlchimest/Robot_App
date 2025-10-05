@@ -13,6 +13,7 @@ config = Config()
 camera_index = config.CAMERA_INDEX
 camera_flip = config.CAMERA_FLIP
 
+# print env data
 print(f"camera_index:{camera_index}")
 print(f"camera_flip:{camera_flip}")
 
