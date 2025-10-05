@@ -1,0 +1,243 @@
+{
+  "name": "Text2Speech",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.output }}"
+            },
+            {
+              "name": "model_id",
+              "value": "eleven_turbo_v2_5"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2f4fbf52-87e4-4cde-8a39-ca2b47377dda",
+      "name": "Text to Speech",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        528,
+        -112
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ERdXz3NOhV4MSA06",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "audio/mpeg"
+              }
+            ]
+          }
+        }
+      },
+      "id": "2a9bff64-a35d-4dcb-a9fe-3260191ba8df",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -800,
+        -160
+      ],
+      "id": "42fa41bc-28df-4754-b9f3-595dda347ae2",
+      "name": "When chat message received",
+      "webhookId": "208289bb-5323-46e5-a78a-4bea6f1f02e1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.userMessage }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        -112
+      ],
+      "id": "d71b4404-2659-49b3-a705-afb3e83ab092",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        96
+      ],
+      "id": "06e0ecda-760d-4178-96b3-ef93f3faed20",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "BY7WuCcXzNgbEfad",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        128,
+        96
+      ],
+      "id": "3b18a455-38b6-430c-ae72-8b7e00894378",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "text-input",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c3a3b18b-8e3e-4590-9f89-8da1f87251e1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -768,
+        16
+      ],
+      "webhookId": "ca7dcf5c-20a7-4e8e-847b-8fa31173aaee"
+    },
+    {
+      "parameters": {
+        "functionCode": "\nconst message =  $json.body.message ;\nconst sessionId = $json.body.sessionId;\nreturn [{\n  json: {\n    sessionId,\n    userMessage: message,\n    currentDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD\n    currentDateTime: new Date().toISOString()\n  }\n}];\n"
+      },
+      "name": "GetDataFromWebhook",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        -16
+      ],
+      "id": "e9254e75-84c9-41bc-b0d2-31878e5534d3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Text to Speech": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        []
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Text to Speech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "GetDataFromWebhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetDataFromWebhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c6368d8a-6d2e-4db9-8e60-9e72a44becee",
+  "meta": {
+    "instanceId": "9cccf600c2aaab93448f977963450a62dee56e84126e400596e2b39bb6ac38f5"
+  },
+  "id": "0KuSIwPLsz0EosQM",
+  "tags": []
+}
