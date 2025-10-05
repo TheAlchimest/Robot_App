@@ -220,12 +220,12 @@ def main():
     
     # إنشاء وبدء الخيوط
     threads = [
+        #threading.Thread(target=tracker.trackUserFace, name="FaceTracker", args=(False,)),
         threading.Thread(target=audio_recording_thread, daemon=True, name="AudioRecorder"),
         threading.Thread(target=speech_to_text_thread, daemon=True, name="SpeechToText"),
         threading.Thread(target=ai_processing_thread, daemon=True, name="AIProcessor"),
         threading.Thread(target=text_to_speech_thread, daemon=True, name="TextToSpeech"),
-        threading.Thread(target=status_monitor_thread, daemon=True, name="StatusMonitor"),
-        threading.Thread(target=tracker.trackUserFace, name="FaceTracker", args=(False,))
+        threading.Thread(target=status_monitor_thread, daemon=True, name="StatusMonitor")
     ]
     
     for thread in threads:
