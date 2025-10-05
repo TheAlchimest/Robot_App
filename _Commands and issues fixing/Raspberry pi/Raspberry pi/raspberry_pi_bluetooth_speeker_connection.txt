@@ -1,0 +1,51 @@
+﻿# https://chatgpt.com/g/g-p-68dbef6461388191b5abbcda5304f3d3-raspberry-pi/c/68d989a4-9b18-8331-965e-f3d4f5238943
+
+أوامر خطوة بخطوة تقدر تنسخها وتشتغل بيها عشان توصل سماعة البلوتوث بالـ Raspberry Pi:
+
+1) تثبيت الحزم
+sudo apt update
+sudo apt install -y bluetooth bluez bluez-tools pulseaudio-module-bluetooth pavucontrol
+
+2) تشغيل خدمة البلوتوث
+sudo systemctl enable bluetooth
+sudo systemctl start bluetooth
+
+3) الدخول لأداة البلوتوث والاقتران
+bluetoothctl
+
+
+ثم اكتب داخلها (سطر سطر):
+
+power on
+agent on
+default-agent
+scan on
+
+
+📌 هيظهرلك عنوان MAC للسماعة (زي XX:XX:XX:XX:XX:XX).
+
+بعد ما يظهر العنوان اكتب:
+
+pair XX:XX:XX:XX:XX:XX
+trust XX:XX:XX:XX:XX:XX
+connect XX:XX:XX:XX:XX:XX
+exit
+
+4) اختيار السماعة كمخرج افتراضي
+
+لو عندك واجهة رسومية:
+
+pavucontrol
+
+
+من Output Devices اختار سماعتك.
+
+لو فيها مايك، من Input Devices اختارها.
+
+لو بدون واجهة رسومية:
+
+pactl list short sinks
+pactl set-default-sink <اسم_السماعة>
+
+5) اختبار الصوت
+aplay /usr/share/sounds/alsa/Front_Center.wav
