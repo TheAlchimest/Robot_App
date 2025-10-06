@@ -6,6 +6,7 @@ from cvzone.SerialModule import SerialObject
 from Config import Config
 
 import time
+import random
 
 
 config = Config()
@@ -13,7 +14,6 @@ config = Config()
 camera_index = config.CAMERA_INDEX
 camera_flip = config.CAMERA_FLIP
 
-# print env data
 print(f"camera_index:{camera_index}")
 print(f"camera_flip:{camera_flip}")
 
@@ -49,6 +49,129 @@ def closeAllWindows(arduino=None):
 	# Close all OpenCV windows
 	cv2.destroyAllWindows()
 	print("All windows closed")
+
+
+def naturalEyeMovement(enableArdunio=False):
+	"""
+	Move the eye naturally without camera tracking
+	"""
+	# Load images
+	background_img = cv2.imread('Resources/Eye-Background.png', cv2.IMREAD_UNCHANGED)
+	iris_img = cv2.imread('Resources/Eye-Ball.png', cv2.IMREAD_UNCHANGED)
+
+	# Initialize Arduino serial communication
+	arduino = None
+	
+	# Function to overlay the iris on the background
+	def overlay_iris(background, iris, x, y):
+		h, w = iris.shape[:2]
+		if x + w > background.shape[1]:
+			w = background.shape[1] - x
+			iris = iris[:, :w]
+		if y + h > background.shape[0]:
+			h = background.shape[0] - y
+			iris = iris[:h]
+
+		alpha = iris[:, :, 3] / 255.0
+		for c in range(3):
+			background[y:y+h, x:x+w, c] = alpha * iris[:, :, c] + (1 - alpha) * background[y:y+h, x:x+w, c]
+
+	# Create a named window and set it to full screen
+	cv2.namedWindow('Overlay Result', cv2.WND_PROP_FULLSCREEN)
+	cv2.setWindowProperty('Overlay Result', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
+	# Possible eye positions (x, y)
+	positions = [
+		(325, 225),  # Center
+		(400, 225),  # Right
+		(250, 225),  # Left
+		(325, 200),  # Up
+		(325, 250),  # Down
+		(380, 210),  # Up-Right
+		(270, 210),  # Up-Left
+		(380, 240),  # Down-Right
+		(270, 240),  # Down-Left
+	]
+	
+	# Arduino angles for each position
+	arduino_angles = [
+		90,   # Center
+		60,   # Right
+		120,  # Left
+		90,   # Up
+		90,   # Down
+		70,   # Up-Right
+		110,  # Up-Left
+		70,   # Down-Right
+		110,  # Down-Left
+	]
+	
+	current_position_index = 0  # Start at center
+	iris_position = positions[current_position_index]
+	xAngle = arduino_angles[current_position_index]
+	
+	# Timing variables
+	last_movement_time = time.time()
+	hold_duration = random.uniform(1.5, 4.0)  # Stay at position for 1.5-4 seconds
+	
+	if enableArdunio:
+		try:
+			arduino = SerialObject(digits=3)
+			print("Arduino initialized successfully")
+		except Exception as e:
+			print(f"Could not initialize Arduino: {e}")
+			arduino = None
+	
+	try:
+		print("Natural eye movement started. Press 'q' or ESC to quit.")
+		
+		while True:
+			current_time = time.time()
+			
+			# Check if it's time to move to a new position
+			if current_time - last_movement_time >= hold_duration:
+				# Choose a new random position
+				# 60% chance to go to center, 40% chance to go to other positions
+				if random.random() < 0.6 and current_position_index != 0:
+					current_position_index = 0  # Go to center
+				else:
+					# Choose random position (avoid staying at same position)
+					available_positions = [i for i in range(len(positions)) if i != current_position_index]
+					current_position_index = random.choice(available_positions)
+				
+				iris_position = positions[current_position_index]
+				xAngle = arduino_angles[current_position_index]
+				
+				print(f"Moving to position: {current_position_index} - {iris_position}")
+				
+				# Send to Arduino
+				if enableArdunio and arduino is not None:
+					arduino.sendData([0, 0, xAngle])
+				
+				# Reset timer with new random duration
+				last_movement_time = current_time
+				hold_duration = random.uniform(1.5, 4.0)
+			
+			# Overlay the iris on the background image
+			background_with_iris = background_img.copy()
+			overlay_iris(background_with_iris, iris_img, iris_position[0], iris_position[1])
+			
+			# Show the result
+			cv2.imshow('Overlay Result', background_with_iris)
+			cv2.moveWindow('Overlay Result', -1920, 0)
+			
+			# Wait and check for exit key
+			key = cv2.waitKey(30) & 0xFF
+			if key == ord('q') or key == 27:  # 'q' or ESC key
+				break
+	
+	except KeyboardInterrupt:
+		print("\nProgram interrupted by user")
+	except Exception as e:
+		print(f"An error occurred: {e}")
+	finally:
+		# Always close windows and release resources
+		closeAllWindows(arduino)
 
 
 def trackUserFace(enableArdunio=False):
@@ -169,4 +292,8 @@ def trackUserFace(enableArdunio=False):
 
 # Example usage
 if __name__ == "__main__":
-	trackUserFace(enableArdunio=False)
+	# Use this for natural eye movement without camera
+	naturalEyeMovement(enableArdunio=False)
+	
+	# Or use this for face tracking when camera works
+	# trackUserFace(enableArdunio=False)
