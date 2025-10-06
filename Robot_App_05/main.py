@@ -9,7 +9,7 @@ from queue import Queue, Empty
 import time
 from local_commands import handle_local_command
 import face_tracker as tracker
-
+import video_eye_player as eye
 # Create objects
 recorder = AudioRecorder()
 stt = SpeechToText()
@@ -221,7 +221,8 @@ def main():
     # إنشاء وبدء الخيوط
     threads = [
         #threading.Thread(target=tracker.trackUserFace, name="FaceTracker", args=(False,)),
-        threading.Thread(target=tracker.naturalEyeMovement, name="naturalEyeMovement", args=(False,)),
+        #threading.Thread(target=tracker.naturalEyeMovement, name="naturalEyeMovement", args=(False,)),
+        threading.Thread(target=eye.playEyeVideo, name="playEyeVideo"),
         threading.Thread(target=audio_recording_thread, daemon=True, name="AudioRecorder"),
         threading.Thread(target=speech_to_text_thread, daemon=True, name="SpeechToText"),
         threading.Thread(target=ai_processing_thread, daemon=True, name="AIProcessor"),
