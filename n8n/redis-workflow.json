@@ -1,0 +1,715 @@
+{
+  "name": "Multi-Agent System - Redis",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatagents2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5cde6c38-65d4-4ff3-a1a4-178dfffe862e",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1472, 528],
+      "webhookId": "multi-agent-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const userId = $input.first().json.body.userId || 'default_user';\nconst userMessage = $input.first().json.body.message;\n\nreturn [{\n  json: {\n    userId: userId,\n    userMessage: userMessage,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "645a3cc3-a769-4061-bfed-b1a27ba016b2",
+      "name": "Extract Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1248, 528]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.UPSTASH_REDIS_REST_URL }}/get/session:{{ $json.userId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "redis-load-001",
+      "name": "Load Session from Redis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1040, 528],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "redis-auth",
+          "name": "Redis Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const userId = $('Extract Input').first().json.userId;\nconst userMessage = $('Extract Input').first().json.userMessage;\n\n// Get Redis response\nconst redisResponse = $input.first().json;\nlet session;\n\n// Check if session exists in Redis\nif (redisResponse.result) {\n  try {\n    session = JSON.parse(redisResponse.result);\n  } catch (e) {\n    session = null;\n  }\n}\n\n// Create new session if not found\nif (!session) {\n  session = {\n    userId: userId,\n    activeAgent: null,\n    agentContext: {\n      waitingForResponse: false,\n      pendingAction: null,\n      actionData: {}\n    },\n    lastMessageTime: new Date().toISOString()\n  };\n} else {\n  // Check for timeout (10 minutes)\n  const now = new Date();\n  const lastMessage = new Date(session.lastMessageTime);\n  const minutesSinceLastMessage = (now - lastMessage) / 60000;\n\n  if (minutesSinceLastMessage > 10) {\n    session.activeAgent = null;\n    session.agentContext = {\n      waitingForResponse: false,\n      pendingAction: null,\n      actionData: {}\n    };\n  }\n}\n\nreturn [{\n  json: {\n    userId: userId,\n    userMessage: userMessage,\n    session: session,\n    sessionId: `session_${userId}`,\n    chatInput: userMessage\n  }\n}];"
+      },
+      "id": "redis-process-001",
+      "name": "Process Redis Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-832, 528]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "aa914fa6-7fd3-4657-ae16-ad7fa0e02592",
+              "leftValue": "={{ $json.session.activeAgent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "ff29d3f6-79e9-4e0b-8b84-3d3037108c78",
+              "leftValue": "={{ $json.session.agentContext.waitingForResponse }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "eaeabc78-e0a9-4dd1-be2a-768b85b9634f",
+      "name": "Has Active Agent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-624, 528]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "targetAgent",
+              "value": "={{ $json.session.activeAgent }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "chatInput",
+              "value": "={{ $json.userMessage }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "userId",
+              "value": "={{ $json.userId }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "session",
+              "value": "={{ $json.session }}",
+              "type": "object"
+            },
+            {
+              "id": "a5",
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0e2e85ce-4881-4475-94a3-e84857939189",
+      "name": "Use Active Agent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [-352, 704]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "### 🧭 **Router Agent System Prompt**\n\nYou are a **Router Agent**, an intelligent dispatcher that analyzes user messages and decides which specialized agent should handle the request.\n\n---\n\n### 📩 **Available Agents**\n\n* **general** → For general questions, casual conversations, or unclear intents.\n* **email** → For all email-related actions (sending, reading, searching).\n* **calendar** → For all calendar-related actions (scheduling, viewing, editing).\n\n---\n\n### ⚙️ **Response Rules**\n\n1. **Respond in valid JSON only**\n2. Structure: `{\"agent\": \"general\", \"isNewRequest\": true}`\n3. `\"agent\"` must be: `\"general\"`, `\"email\"`, or `\"calendar\"`\n4. `\"isNewRequest\"` is `true` for new topics, `false` for continuing\n5. Default to `\"general\"` for greetings or unclear messages\n\n---\n\n### 🧠 **Examples**\n\n**Input:** Send an email to Ahmed\n**Output:** `{\"agent\": \"email\", \"isNewRequest\": true}`\n\n**Input:** When is my next meeting?\n**Output:** `{\"agent\": \"calendar\", \"isNewRequest\": true}`\n\n**Input:** Good morning\n**Output:** `{\"agent\": \"general\", \"isNewRequest\": true}`"
+        }
+      },
+      "id": "702a6a59-b910-4aef-94fa-9955c037b8b3",
+      "name": "Router Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [-480, 192]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2ddcd005-0feb-40b2-bca2-bd3e3239f049",
+      "name": "OpenAI Router",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [-528, 368],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_router"
+      },
+      "id": "a0b1193b-13da-40f8-a3fe-a118f4f527d3",
+      "name": "Memory Router",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [-432, 368]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"agent\": \"general\", \"isNewRequest\": true}"
+      },
+      "id": "49d207e3-0ac2-4b1e-bcb8-68ac89ca2268",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [-336, 368]
+    },
+    {
+      "parameters": {
+        "jsCode": "const routerOutput = $input.first().json.output || $input.first().json.text;\nconst session = $('Process Redis Session').first().json.session;\nconst userMessage = $('Process Redis Session').first().json.userMessage;\nconst userId = $('Process Redis Session').first().json.userId;\nconst sessionId = $('Process Redis Session').first().json.sessionId;\n\nlet routerResponse;\ntry {\n  if (typeof routerOutput === 'object') {\n    routerResponse = routerOutput;\n  } else {\n    const jsonMatch = routerOutput.match(/\\{[\\s\\S]*?\\}/);\n    if (jsonMatch) {\n      routerResponse = JSON.parse(jsonMatch[0]);\n    } else {\n      throw new Error('No JSON');\n    }\n  }\n} catch (e) {\n  routerResponse = { agent: 'general', isNewRequest: true };\n}\n\nlet targetAgent;\nif (routerResponse.isNewRequest) {\n  targetAgent = routerResponse.agent;\n} else if (session.activeAgent) {\n  targetAgent = session.activeAgent;\n} else {\n  targetAgent = routerResponse.agent;\n}\n\nreturn [{\n  json: {\n    targetAgent,\n    chatInput: userMessage,\n    userId,\n    session,\n    sessionId\n  }\n}];"
+      },
+      "id": "e0706194-0c84-4181-b87a-3cdec74df26a",
+      "name": "Process Routing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-80, 192]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "{{ $json.targetAgent }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notExists"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "general"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.targetAgent.toLowerCase() }}",
+                    "rightValue": "general",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "general"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.targetAgent.toLowerCase() }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "email"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.targetAgent.toLowerCase() }}",
+                    "rightValue": "calendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "calendar"
+            }
+          ]
+        }
+      },
+      "id": "18f80ea7-4cca-4cd2-86ee-84c0a7af1d25",
+      "name": "Route to Agent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [288, 576]
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "أنت مساعد عام ذكي ومفيد. أجب على الأسئلة بوضوح واختصار."
+        }
+      },
+      "id": "7114cb91-cb96-4a64-b587-524a675580e1",
+      "name": "General Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [912, -112]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2daa4ec5-9598-4e73-b44f-69acc567baea",
+      "name": "OpenAI General",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [816, 64],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_general"
+      },
+      "id": "c60f333a-f1a7-4b04-a626-e71a0da4951c",
+      "name": "Memory General",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [944, 64]
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# Email Agent Prompt\n\nYou are an Email Agent specialized in managing all email-related tasks.\n\n## 🎯 Responsibilities:\n- Sending emails\n- Reading emails\n- Searching emails\n\n## 📜 Rules:\n1. Extract: recipient, subject, body\n2. If info missing → Ask briefly\n3. If complete → Generate draft and ask confirmation\n4. Before sending → Show summary\n5. Auto-detect language\n\n## 📤 Output Format:\n```json\n{\n  \"agent\": \"email\",\n  \"status\": \"draft|confirmation|sent|info_needed\",\n  \"output\": \"Your message\"\n}\n```\n\n## 📩 Available Agents:\n- **general** → General questions\n- **email** → (YOU) Email tasks\n- **calendar** → Calendar events"
+        }
+      },
+      "id": "f51cf5de-826a-45a5-a3ee-0cf7c1307e21",
+      "name": "Email Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [880, 528]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c2cb30dd-9d34-408b-add6-1ee2f7bf58f7",
+      "name": "OpenAI Email",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [736, 736],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_email"
+      },
+      "id": "ac2e4267-8b4b-463f-a71c-6bd870eb5a6c",
+      "name": "Memory Email",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [864, 736]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $fromAI('To', '', 'string') }}",
+        "subject": "={{ $fromAI('Subject', '', 'string') }}",
+        "message": "={{ $fromAI('Message', '', 'string') }}",
+        "options": {}
+      },
+      "id": "0c4500a0-e63a-4856-9a52-42282336e3fa",
+      "name": "Tool Send Email",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [1120, 736],
+      "webhookId": "e537487d-d26b-48c0-b7f4-e3dc5b5af936",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RkfCbJZychg6ng7j",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 10,
+        "filters": {}
+      },
+      "id": "58c2d0fa-27d2-46be-ab1b-c6b35acf26e3",
+      "name": "Tool Search Emails",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [992, 736],
+      "webhookId": "068d9bfc-5c6c-4860-a468-7e3d582f4e5c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RkfCbJZychg6ng7j",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "أنت وكيل متخصص في إدارة التقويم والمواعيد.\n\nالقواعد:\n1. اطلب المعلومات الناقصة (التاريخ، الوقت، العنوان، المدة)\n2. قبل إضافة موعد، اعرض التفاصيل واطلب التأكيد\n3. عند طلب تأكيد، قل \"هل تريد إضافة هذا الموعد؟\"\n4. عند الانتهاء، ابدأ بكلمة \"تم\"\n5. استخدم الأدوات المتاحة"
+        }
+      },
+      "id": "90d415e7-389f-488d-b29c-fce8ad0c224a",
+      "name": "Calendar Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [704, 944]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "5a4e07b5-a448-4bd0-846a-851a8b38acbf",
+      "name": "OpenAI Calendar",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [608, 1152],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_calendar"
+      },
+      "id": "71e80a7c-6e0a-4e22-afd9-8afdc4bb6147",
+      "name": "Memory Calendar",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [736, 1152]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $fromAI('Calendar', '', 'string') }}",
+          "mode": "id"
+        },
+        "start": "={{ $fromAI('Start', '', 'string') }}",
+        "end": "={{ $fromAI('End', '', 'string') }}",
+        "additionalFields": {}
+      },
+      "id": "7ea83832-fc5e-4eaa-9117-b838961d7904",
+      "name": "Tool Create Event",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [928, 1104],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Bjsel9fkEh4Cv0nT",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $fromAI('Calendar', '', 'string') }}",
+          "mode": "id"
+        },
+        "limit": "={{ $fromAI('Limit', '10', 'number') }}",
+        "options": {}
+      },
+      "id": "9819ec64-d6fc-4834-91cb-6b8fee8f8c72",
+      "name": "Tool List Events",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [864, 1200],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Bjsel9fkEh4Cv0nT",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const routeData = $('ProcessRouterData').first().json;\nif (!routeData) {\n    throw new Error('No data from Route to Agent node');\n}\n\nconst agentResponse = $input.first().json.output || $input.first().json.text;\nconst targetAgent = routeData.targetAgent;\nlet newAgentContext = routeData.session?.agentContext || {\n    waitingForResponse: false,\n    pendingAction: null,\n    actionData: {}\n};\nlet keepAgentActive = false;\n\nif (!agentResponse) {\n    throw new Error('No agent response found');\n}\n\nconst responseText = agentResponse.toLowerCase();\n\nif (responseText.includes('هل تريد') || \n    responseText.includes('تأكيد') ||\n    responseText.includes('أرجو') ||\n    responseText.includes('أحتاج') ||\n    responseText.includes('ما هو') ||\n    responseText.includes('من فضلك') ||\n    responseText.includes('?') ||\n    responseText.includes('؟')) {\n  \n    keepAgentActive = true;\n    newAgentContext.waitingForResponse = true;\n  \n    if (responseText.includes('إيميل') || responseText.includes('email')) {\n        newAgentContext.pendingAction = 'send_email';\n    } else if (responseText.includes('موعد') || responseText.includes('اجتماع')) {\n        newAgentContext.pendingAction = 'create_event';\n    }\n  \n} else if (responseText.startsWith('تم') || \n           responseText.includes('انتهى') ||\n           responseText.includes('بنجاح')) {\n  \n    keepAgentActive = false;\n    newAgentContext = {\n        waitingForResponse: false,\n        pendingAction: null,\n        actionData: {}\n    };\n}\n\nif (routeData.chatInput && routeData.chatInput.trim().length < 10) {\n    keepAgentActive = true;\n}\n\nreturn [{\n    json: {\n        response: agentResponse,\n        activeAgent: keepAgentActive ? targetAgent : null,\n        agentContext: newAgentContext,\n        userId: routeData.userId,\n        userMessage: routeData.chatInput,\n        session: routeData.session\n    }\n}];"
+      },
+      "id": "86c54713-3678-4c1f-a70d-5fea58975582",
+      "name": "Process Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1616, 560]
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.first().json;\n\nconst updatedSession = {\n  userId: inputData.userId,\n  activeAgent: inputData.activeAgent,\n  agentContext: inputData.agentContext,\n  lastMessageTime: new Date().toISOString()\n};\n\nreturn [{\n  json: {\n    response: inputData.response,\n    userId: inputData.userId,\n    activeAgent: inputData.activeAgent,\n    sessionKey: `session:${inputData.userId}`,\n    sessionData: JSON.stringify(updatedSession),\n    ttl: 1800\n  }\n}];"
+      },
+      "id": "redis-prepare-001",
+      "name": "Prepare Session for Redis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1824, 560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.UPSTASH_REDIS_REST_URL }}/setex/{{ $json.sessionKey }}/{{ $json.ttl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.sessionData }}",
+        "options": {}
+      },
+      "id": "redis-save-001",
+      "name": "Save Session to Redis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2032, 560],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "redis-auth",
+          "name": "Redis Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"response\": $json.response, \"activeAgent\": $json.activeAgent } }}",
+        "options": {}
+      },
+      "id": "6eb839ab-6579-45b2-aa4f-4e329ae863d3",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2240, 560]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [-1488, 288],
+      "id": "28521259-ff8e-41d0-b161-30b682afd209",
+      "name": "When chat message received",
+      "webhookId": "1e419c2e-1eb0-423d-aec5-862773fe5363"
+    },
+    {
+      "parameters": {
+        "jsCode": "const userId = $input.first().json.sessionId || 'default_user';\nconst userMessage = $input.first().json.chatInput;\n\nreturn [{\n  json: {\n    userId: userId,\n    userMessage: userMessage,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "e99ab605-cd7d-4353-91c7-5fd556e2a2f3",
+      "name": "Extract Input1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1280, 288]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [$input.first().json];"
+      },
+      "id": "985b3897-3d13-48c8-a501-730f9fb89182",
+      "name": "ProcessRouterData",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-48, 624]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"agent\": \"email\",\n  \"status\": \"sent\",\n  \"output\": \"Done! Email sent successfully\"\n}"
+      },
+      "id": "f934338b-9744-4cc2-85f6-5c77ca983546",
+      "name": "Structured Output Parser1",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [1024, 896]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Extract Input", "type": "main", "index": 0}]]
+    },
+    "Extract Input": {
+      "main": [[{"node": "Load Session from Redis", "type": "main", "index": 0}]]
+    },
+    "Load Session from Redis": {
+      "main": [[{"node": "Process Redis Session", "type": "main", "index": 0}]]
+    },
+    "Process Redis Session": {
+      "main": [[{"node": "Has Active Agent?", "type": "main", "index": 0}]]
+    },
+    "Has Active Agent?": {
+      "main": [
+        [{"node": "Use Active Agent", "type": "main", "index": 0}],
+        [{"node": "Router Agent", "type": "main", "index": 0}]
+      ]
+    },
+    "Use Active Agent": {
+      "main": [[{"node": "ProcessRouterData", "type": "main", "index": 0}]]
+    },
+    "Router Agent": {
+      "main": [[{"node": "Process Routing", "type": "main", "index": 0}]]
+    },
+    "OpenAI Router": {
+      "ai_languageModel": [[{"node": "Router Agent", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Memory Router": {
+      "ai_memory": [[{"node": "Router Agent", "type": "ai_memory", "index": 0}]]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [[{"node": "Router Agent", "type": "ai_outputParser", "index": 0}]]
+    },
+    "Process Routing": {
+      "main": [[{"node": "ProcessRouterData", "type": "main", "index": 0}]]
+    },
+    "Route to Agent": {
+      "main": [
+        [{"node": "General Agent", "type": "main", "index": 0}],
+        [{"node": "General Agent", "type": "main", "index": 0}],
+        [{"node": "Email Agent", "type": "main", "index": 0}],
+        [{"node": "Calendar Agent", "type": "main", "index": 0}]
+      ]
+    },
+    "General Agent": {
+      "main": [[{"node": "Process Response", "type": "main", "index": 0}]]
+    },
+    "OpenAI General": {
+      "ai_languageModel": [[{"node": "General Agent", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Memory General": {
+      "ai_memory": [[{"node": "General Agent", "type": "ai_memory", "index": 0}]]
+    },
+    "Email Agent": {
+      "main": [[{"node": "Process Response", "type": "main", "index": 0}]]
+    },
+    "OpenAI Email": {
+      "ai_languageModel": [[{"node": "Email Agent", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Memory Email": {
+      "ai_memory": [[{"node": "Email Agent", "type": "ai_memory", "index": 0}]]
+    },
+    "Tool Send Email": {
+      "ai_tool": [[{"node": "Email Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "Tool Search Emails": {
+      "ai_tool": [[{"node": "Email Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "Calendar Agent": {
+      "main": [[{"node": "Process Response", "type": "main", "index": 0}]]
+    },
+    "OpenAI Calendar": {
+      "ai_languageModel": [[{"node": "Calendar Agent", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Memory Calendar": {
+      "ai_memory": [[{"node": "Calendar Agent", "type": "ai_memory", "index": 0}]]
+    },
+    "Tool Create Event": {
+      "ai_tool": [[{"node": "Calendar Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "Tool List Events": {
+      "ai_tool": [[{"node": "Calendar Agent", "type": "ai_tool", "index": 0}]]
+    },
+    "Process Response": {
+      "main": [[{"node": "Prepare Session for Redis", "type": "main", "index": 0}]]
+    },
+    "Prepare Session for Redis": {
+      "main": [[{"node": "Save Session to Redis", "type": "main", "index": 0}]]
+    },
+    "Save Session to Redis": {
+      "main": [[{"node": "Respond", "type": "main", "index": 0}]]
+    },
+    "When chat message received": {
+      "main": [[{"node": "Extract Input1", "type": "main", "index": 0}]]
+    },
+    "Extract Input1": {
+      "main": [[{"node": "Load Session from Redis", "type": "main", "index": 0}]]
+    },
+    "ProcessRouterData": {
+      "main": [[{"node": "Route to Agent", "type": "main", "index": 0}]]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [[{"node": "Email Agent", "type": "ai_outputParser", "index": 0}]]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "redis-version-001",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bb3d566d8ecaecddcd7b1fe4e66f21e5379c0b4d8c972dae0b57ee62a021fec7"
+  },
+  "id": "x8Mmg77v6rKfsT5D-redis",
+  "tags": []
+}
