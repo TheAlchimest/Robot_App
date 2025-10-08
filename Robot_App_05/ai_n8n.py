@@ -7,6 +7,7 @@ config = Config()
 
 session_id = config.DEVICE_ID
 n8n_url = config.N8N_URL
+n8n_active_agent = "general"
 
 def chat(message):
     """Optimized chat function"""
@@ -19,7 +20,9 @@ def chat(message):
     }
     payload = {
         "sessionId": session_id,
-        "message": message
+        "userId": session_id,
+        "message": message,
+        "activeAgent":n8n_active_agent
     }
 
     try:
@@ -28,6 +31,7 @@ def chat(message):
         
         # حل: استخدم response.json() بدل content
         data = response.json()
+        n8n_active_agent = data["activeAgent"];
         print(data["output"])    # يطبع النص اللي راجع
         
         return data["output"]
