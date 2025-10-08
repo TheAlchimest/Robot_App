@@ -198,48 +198,9 @@ def main():
     """الدالة الرئيسية مع إدارة ذكية للحالة والمقاطعة"""
     pygame.init()
     
-    print("=" * 60)
-    print("🚀 AI Assistant System Starting...")
-    print("=" * 60)
-    print("\n📋 Available Local Commands (No API needed):")
-    print("  • Greetings: 'hello', 'hi', 'مرحبا', 'هلا'")
-    print("  • Pause: 'bye', 'goodbye', 'مع السلامة', 'sleep mode'")
-    print("  • Resume: 'wake up', 'استيقظ', 'are you there'")
-    print("  • Time: 'what time is it', 'كم الساعة'")
-    print("  • Date: 'what date is it', 'ما التاريخ'")
-    print("  • Thanks: 'thank you', 'شكرا'")
-    print("  • Help: 'help', 'مساعدة'")
-    print("  • Exit: Press Ctrl+C")
-    print("\n🎯 NEW FEATURE: Interrupt Handling")
-    print("  • You can interrupt the assistant anytime while it's speaking")
-    print("  • Just start speaking and it will stop immediately")
-    print("  • All pending processes will be cancelled")
-    print("=" * 60)
-    
-    tts.text_to_speech("Hello, I'm ready to help you.")
-    #tts.text_to_speech("Hello, I'm ready to help you. You can interrupt me anytime by just speaking.")
-    
-    # إنشاء وبدء الخيوط
-    threads = [
-        #threading.Thread(target=tracker.trackUserFace, name="FaceTracker", args=(False,)),
-        #threading.Thread(target=tracker.naturalEyeMovement, name="naturalEyeMovement", args=(False,)),
-        threading.Thread(target=eye.playEyeVideo, name="playEyeVideo"),
-        threading.Thread(target=audio_recording_thread, daemon=True, name="AudioRecorder"),
-        threading.Thread(target=speech_to_text_thread, daemon=True, name="SpeechToText"),
-        threading.Thread(target=ai_processing_thread, daemon=True, name="AIProcessor"),
-        threading.Thread(target=text_to_speech_thread, daemon=True, name="TextToSpeech"),
-        threading.Thread(target=status_monitor_thread, daemon=True, name="StatusMonitor")
-    ]
-    
-    for thread in threads:
-        thread.start()
-        print(f"✅ Started: {thread.name}")
-    
-    print("\n" + "=" * 60)
-    print("✅ System ready! Start speaking...")
-    print("💡 Tip: You can interrupt anytime by speaking while I'm talking")
-    print("=" * 60 + "\n")
-    
+    n8n_response = llm.chat("can you hear me?")
+    print(F"n8n_response:{n8n_response}")  # print safely
+   
     # إبقاء الخيط الرئيسي حيًا
     try:
         while system_state.is_active:
