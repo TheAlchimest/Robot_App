@@ -30,7 +30,7 @@ class SystemState:
     def __init__(self):
         self.is_listening = True
         self.is_active = True
-        self.is_speaking = False  # جديد: لتتبع حالة التحدث
+        self.is_speaking = False  # NEW: to track speaking state
         self.lock = threading.Lock()
     
     def pause_listening(self):
@@ -58,33 +58,33 @@ class SystemState:
             return self.is_speaking
     
     def interrupt(self):
-        """مقاطعة النظام وإيقاف كل العمليات الجارية"""
+        """Interrupt the system and stop all running processes"""
         with self.lock:
             print("\n⚠️ INTERRUPT: User is speaking - stopping all processes...")
-            # إيقاف الصوت فورًا
+            # Stop audio immediately
             tts.stop_speech()
-            # تفريغ جميع الطوابير
+            # Clear all queues
             self.clear_all_queues()
             self.is_speaking = False
             print("✅ All processes stopped, ready for new input")
     
     def clear_all_queues(self):
-        """تفريغ جميع الطوابير"""
-        # تفريغ audio_queue
+        """Clear all queues"""
+        # Clear audio_queue
         while not audio_queue.empty():
             try:
                 audio_queue.get_nowait()
             except Empty:
                 break
         
-        # تفريغ text_queue
+        # Clear text_queue
         while not text_queue.empty():
             try:
                 text_queue.get_nowait()
             except Empty:
                 break
         
-        # تفريغ response_queue
+        # Clear response_queue
         while not response_queue.empty():
             try:
                 response_queue.get_nowait()
@@ -94,18 +94,18 @@ class SystemState:
 system_state = SystemState()
 
 def audio_recording_thread():
-    """خيط مخصص لتسجيل الصوت مع كشف المقاطعة"""
+    """Thread dedicated to recording audio with interruption detection"""
     while system_state.is_active:
         try:
-            # التسجيل المستمر
+            # Continuous recording
             audio_buffer = recorder.record_until_silence(
                 silence_threshold=500,
                 silence_duration=1.5,
                 max_duration=20
             )
             '''
-            # هنوقف هنا بحيث انه يتم ايقاف باقي ال queues فقط في حالة وجود text
-            # إذا كان النظام يتحدث، هذا يعني مقاطعة!
+            # Stop here so that only queues are cleared when text exists
+            # If the system is speaking, that means interruption!
             if system_state.get_speaking():
                 print("\n🔴 INTERRUPT DETECTED!")
                 system_state.interrupt()
@@ -117,7 +117,7 @@ def audio_recording_thread():
             time.sleep(1)
 
 def speech_to_text_thread():
-    """خيط مخصص لتحويل الصوت إلى نص"""
+    """Thread dedicated to converting speech to text"""
     while system_state.is_active:
         try:
             audio_buffer = audio_queue.get(timeout=1)
@@ -134,15 +134,15 @@ def speech_to_text_thread():
             print(f"Conversion error: {e}")
 
 def ai_processing_thread():
-    """خيط مخصص لمعالجة الذكاء الاصطناعي"""
+    """Thread dedicated to AI processing"""
     while system_state.is_active:
         try:
             user_input = text_queue.get(timeout=1)
             
-            # فحص الأوامر المحلية أولاً
+            # Check local commands first
             should_continue, local_response, action, x = handle_local_command(user_input)
             print(F"should_continue:{should_continue} / local_response:{local_response} / action:{action}")
-            # معالجة تغييرات الحالة
+            # Handle state changes
             if action == 'pause':
                 system_state.pause_listening()
                 print("💤 System paused - waiting for wake up command...")
@@ -150,7 +150,7 @@ def ai_processing_thread():
                 system_state.resume_listening()
                 print("✅ System resumed - ready to help!")
             
-            # إرسال الاستجابة
+            # Send response
             if local_response:
                 response_queue.put(local_response)
             elif should_continue and system_state.should_listen():
@@ -165,20 +165,20 @@ def ai_processing_thread():
             print(f"Processing error: {e}")
 
 def text_to_speech_thread():
-    """خيط مخصص لتحويل النص إلى صوت مع إمكانية المقاطعة"""
+    """Thread dedicated to converting text to speech with interruption support"""
     while system_state.is_active:
         try:
             response = response_queue.get(timeout=1)
             if response:
                 print(f"\n🤖 Response: {response}")
                 
-                # تحديد حالة التحدث
+                # Set speaking state
                 system_state.set_speaking(True)
                 
-                # التحدث (مع إمكانية المقاطعة)
+                # Speak (with possible interruption)
                 tts.text_to_speech(response)
                 
-                # انتهى التحدث
+                # Finished speaking
                 system_state.set_speaking(False)
                 print("✅ Finished speaking\n")
                 
@@ -189,7 +189,7 @@ def text_to_speech_thread():
             system_state.set_speaking(False)
 
 def status_monitor_thread():
-    """مراقبة وعرض حالة النظام"""
+    """Monitor and display system status"""
     while system_state.is_active:
         try:
             time.sleep(30)
@@ -203,7 +203,7 @@ def status_monitor_thread():
             print(f"Monitor error: {e}")
 
 def main():
-    """الدالة الرئيسية مع إدارة ذكية للحالة والمقاطعة"""
+    """Main function with intelligent state and interruption management"""
     pygame.init()
     
     print("=" * 60)
@@ -227,7 +227,7 @@ def main():
     tts.text_to_speech("Hello, I'm ready to help you.")
     #tts.text_to_speech("Hello, I'm ready to help you. You can interrupt me anytime by just speaking.")
     
-    # إنشاء وبدء الخيوط
+    # Create and start threads
     threads = [
         #threading.Thread(target=tracker.trackUserFace, name="FaceTracker", args=(False,)),
         #threading.Thread(target=tracker.naturalEyeMovement, name="naturalEyeMovement", args=(False,)),
@@ -248,7 +248,7 @@ def main():
     print("💡 Tip: You can interrupt anytime by speaking while I'm talking")
     print("=" * 60 + "\n")
     
-    # إبقاء الخيط الرئيسي حيًا
+    # Keep main thread alive
     try:
         while system_state.is_active:
             time.sleep(1)
