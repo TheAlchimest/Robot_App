@@ -10,6 +10,12 @@ import time
 from local_commands import handle_local_command
 import face_tracker as tracker
 import video_eye_player as eye
+import os
+
+os.environ.setdefault("DISPLAY", ":0")
+os.environ.setdefault("XAUTHORITY", "/home/pi/.Xauthority")
+os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
+
 # Create objects
 recorder = AudioRecorder()
 stt = SpeechToText()
@@ -97,12 +103,13 @@ def audio_recording_thread():
                 silence_duration=1.5,
                 max_duration=20
             )
-            
+            '''
+            # هنوقف هنا بحيث انه يتم ايقاف باقي ال queues فقط في حالة وجود text
             # إذا كان النظام يتحدث، هذا يعني مقاطعة!
             if system_state.get_speaking():
                 print("\n🔴 INTERRUPT DETECTED!")
                 system_state.interrupt()
-            
+            '''
             audio_queue.put(audio_buffer)
             
         except Exception as e:
@@ -118,6 +125,7 @@ def speech_to_text_thread():
             
             if user_input:
                 print(f"\n📝 User: {user_input}")
+                system_state.interrupt()
                 text_queue.put(user_input)
                 
         except Empty:
