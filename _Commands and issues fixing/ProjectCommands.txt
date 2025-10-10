@@ -16,6 +16,9 @@ python main.py
 Configured Rasp 
 =========================
 cd ~/apps/Robot_App/Robot_App_05
+pyenv local 3.10.0
+python -m venv .venv
+source .venv/bin/activate
 source .venv/bin/activate
 python main.py
  sudo poweroff

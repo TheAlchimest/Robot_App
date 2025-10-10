@@ -1,0 +1,12 @@
+# Core AI & Speech Libraries
+elevenlabs==2.16.0
+
+# Audio Processing
+pyaudio==0.2.14
+pygame==2.6.1
+
+# Serial Communication (if Arduino is used)
+pyserial==3.5
+
+# Environment & Configuration
+python-dotenv==1.0.1
