@@ -16,7 +16,6 @@ stt = SpeechToText()
 # Queues for thread communication
 audio_queue = Queue()
 text_queue = Queue()
-response_queue = Queue()
 
 # System state
 class SystemState:
@@ -77,13 +76,6 @@ class SystemState:
             except Empty:
                 break
         
-        # تفريغ response_queue
-        while not response_queue.empty():
-            try:
-                response_queue.get_nowait()
-            except Empty:
-                break
-
 system_state = SystemState()
 
 def audio_recording_thread():
@@ -145,11 +137,11 @@ def ai_processing_thread():
             
             # إرسال الاستجابة
             if local_response:
-                response_queue.put(local_response)
+                text_to_speech(local_response)
             elif should_continue and system_state.should_listen():
                 print("🤔 Processing with AI...")
                 response = n8n.chat(user_input)
-                response_queue.put(response)
+                text_to_speech(response)
                 print(response)
             
         except Empty:
@@ -157,29 +149,26 @@ def ai_processing_thread():
         except Exception as e:
             print(f"Processing error: {e}")
 
-def text_to_speech_thread():
-    """خيط مخصص لتحويل النص إلى صوت مع إمكانية المقاطعة"""
-    while system_state.is_active:
-        try:
-            response = response_queue.get(timeout=1)
-            if response:
-                print(f"\n🤖 Response: {response}")
-                
-                # تحديد حالة التحدث
-                system_state.set_speaking(True)
-                
-                # التحدث (مع إمكانية المقاطعة)
-                tts.text_to_speech(response)
-                
-                # انتهى التحدث
-                system_state.set_speaking(False)
-                print("✅ Finished speaking\n")
-                
-        except Empty:
-            continue
-        except Exception as e:
-            print(f"Text-to-speech error: {e}")
+def text_to_speech(message):
+    try:
+        if message:
+            print(f"\n🤖 Response: {message}")
+            
+            # تحديد حالة التحدث
+            system_state.set_speaking(True)
+            
+            # التحدث (مع إمكانية المقاطعة)
+            tts.text_to_speech(message)
+            
+            # انتهى التحدث
             system_state.set_speaking(False)
+            print("✅ Finished speaking\n")
+            
+    except Empty:
+        return
+    except Exception as e:
+        print(f"Text-to-speech error: {e}")
+        system_state.set_speaking(False)
 
 def status_monitor_thread():
     """مراقبة وعرض حالة النظام"""
@@ -225,7 +214,6 @@ def main():
         threading.Thread(target=audio_recording_thread, daemon=True, name="AudioRecorder"),
         threading.Thread(target=speech_to_text_thread, daemon=True, name="SpeechToText"),
         threading.Thread(target=ai_processing_thread, daemon=True, name="AIProcessor"),
-        threading.Thread(target=text_to_speech_thread, daemon=True, name="TextToSpeech")
         #threading.Thread(target=status_monitor_thread, daemon=True, name="StatusMonitor")
     ]
     
