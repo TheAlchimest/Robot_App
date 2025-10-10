@@ -7,10 +7,12 @@
 ## https://chatgpt.com/g/g-p-68dbef6461388191b5abbcda5304f3d3-raspberry-pi/c/68de3258-df10-8329-9ced-09262216e6b4
 ----------------------------------------------------------
 # تحديث النظام وأدوات البناء
-sudo apt update && sudo apt full-upgrade -y
-sudo apt install -y git curl build-essential \
-  libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev \
-  libffi-dev liblzma-dev tk-dev libncursesw5-dev xz-utils
+sudo apt update
+sudo apt upgrade -y
+
+sudo apt install -y git curl build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libffi-dev liblzma-dev tk-dev libncursesw5-dev xz-utils
+sudo apt install -y build-essential make libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm xz-utils tk-dev libncurses-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev uuid-dev libgdbm-dev libnss3-dev
+
 
 # تثبيت pyenv للمستخدم pi
 curl https://pyenv.run | bash
@@ -23,9 +25,12 @@ exec $SHELL  # أو اعمل logout/login
 
 # نزّل Python 3.10 (اختَر آخر patch من السلسلة 3.10)
 pyenv install 3.10.0
+pyenv global 3.10.0
+pyenv global 3.10.0
 
 # أنشئ فولدر للمشروع وفيرتشوال إنف على 3.10
 mkdir -p ~/apps/myproject && cd ~/apps/myproject
+cd /home/pi/apps/Robot_App_05_Zero
 pyenv local 3.10.0
 python -m venv .venv
 source .venv/bin/activate

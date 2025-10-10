@@ -1,4 +1,4 @@
-=========================
+﻿=========================
 Windows
 =========================
 py -3.10 -m venv .venv
@@ -19,8 +19,22 @@ cd ~/apps/Robot_App/Robot_App_05
 pyenv local 3.10.0
 python -m venv .venv
 source .venv/bin/activate
+
+# pip سريع + piwheels
+python -m pip install --upgrade pip
+pip config set global.index-url https://www.piwheels.org/simple
+pip config set global.extra-index-url https://pypi.org/simple
+
+
+git clone https://github.com/TheAlchimest/Robot_App.git
+python -m venv .venv
+source .venv/bin/activate
+pip install -r req.txt
+
+cd ~/apps/Robot_App_05_Zero
 source .venv/bin/activate
 python main.py
- sudo poweroff
 =========================
-
+sudo raspi-config
+sudo poweroff
+cd ~/home/pi/apps/ttmp
