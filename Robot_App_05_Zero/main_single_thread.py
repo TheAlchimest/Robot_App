@@ -7,7 +7,7 @@ import ai_n8n as llm
 import pygame
 import time
 from local_commands import handle_local_command
-# ملاحظة: تم حذف أي استخدام لـ face_tracker / video_eye_player لتجنب الحلقات المتزامنة
+# Note: All use of face_tracker / video_eye_player was removed to avoid concurrent loops
 
 # ------------------- System State -------------------
 class SystemState:
@@ -61,7 +61,7 @@ def main():
         while system_state.is_active:
             if not system_state.is_listening:
                 print("💤 System paused - say a resume command (e.g., 'wake up').")
-            # 1) تسجيل حتى الصمت
+            # 1) Record until silence
             try:
                 audio_buffer = recorder.record_until_silence(
                     silence_threshold=500,
@@ -73,7 +73,7 @@ def main():
                 time.sleep(1)
                 continue
 
-            # 2) تحويل الكلام لنص
+            # 2) Convert speech to text
             try:
                 user_input = stt.convert(audio_buffer)
             except Exception as conv_err:
@@ -81,12 +81,12 @@ def main():
                 continue
 
             if not user_input:
-                # لا يوجد كلام مفهوم؛ كرر الحلقة
+                # No valid speech detected; repeat the loop
                 continue
 
             print(f"\n📝 User: {user_input}")
 
-            # 3) أوامر محلية أولاً
+            # 3) Handle local commands first
             try:
                 should_continue, local_response, action, _ = handle_local_command(user_input)
                 print(f"should_continue:{should_continue} / local_response:{local_response} / action:{action}")
@@ -94,7 +94,7 @@ def main():
                 print(f"Local command error: {local_err}")
                 should_continue, local_response, action = True, None, None
 
-            # 3.1) إدارة الحالة (إيقاف/استئناف)
+            # 3.1) Manage system state (pause/resume)
             if action == 'pause':
                 system_state.pause_listening()
                 print("💤 System paused.")
@@ -102,12 +102,12 @@ def main():
                 system_state.resume_listening()
                 print("✅ System resumed.")
 
-            # 3.2) الرد المحلي إن وُجد
+            # 3.2) Speak local response if available
             if local_response:
                 speak(local_response)
                 continue
 
-            # 4) لو مسموح نكمل وبنستمع حالياً، نرسل للـ LLM
+            # 4) If allowed to continue and system is listening, send to LLM
             if should_continue and system_state.is_listening:
                 try:
                     print("🤔 Processing with AI...")
@@ -118,11 +118,11 @@ def main():
                     print(f"AI processing error: {ai_err}")
                     continue
             else:
-                # لو السيستم متوقف عن الاستماع، ندي تلميح بسيط
+                # If the system is paused, give a small hint
                 if not system_state.is_listening:
                     speak("I'm paused. Say 'wake up' to resume.")
 
-            # 5) مهلة صغيرة قبل الدورة التالية
+            # 5) Small delay before next loop
             time.sleep(0.1)
 
     except KeyboardInterrupt:
