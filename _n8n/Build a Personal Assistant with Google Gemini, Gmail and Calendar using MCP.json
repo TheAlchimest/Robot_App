@@ -1,0 +1,172 @@
+{
+  "name": "Build a Personal Assistant with Google Gemini, Gmail and Calendar using MCP",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f27f3d00-8019-401f-a1c4-5c9754ca5d7e",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "position": [
+        368,
+        240
+      ],
+      "webhookId": "989c3a79-5a0c-4ca1-a542-55e060816121",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-preview-05-06",
+        "options": {}
+      },
+      "id": "49e4bd69-141f-47ae-bb97-f03a92e56131",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        368,
+        592
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Y94Pec1lI9f7IHRZ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "aaa58803-52ad-439b-8876-05a84fc63eaf",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        720,
+        448
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "sseEndpoint": "https://thealchimest10.app.n8n.cloud/mcp/google_mcp/sse",
+        "options": {}
+      },
+      "id": "24e5ee35-c53c-4e82-9d79-d48d9220d7ac",
+      "name": "MCP Client",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "position": [
+        1072,
+        448
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "26538db2-f3af-47a8-b97e-2afa7d9ea05d",
+      "name": "Personal Assistant",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        640,
+        240
+      ],
+      "typeVersion": 1.9
+    },
+    {
+      "parameters": {
+        "content": "## MCP Client\n\nPaste your MCP client URL from the MCP server trigger node.\n\nCustomize your output node to receive the workflow completion notifications (eg. Telegram, Gmail) from your personal assistant",
+        "height": 480,
+        "width": 480
+      },
+      "id": "dc9dcee5-35ec-4ea3-8c67-21c277705dec",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        960,
+        80
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c0b41e2a-a944-409f-b650-4ba8f05f497f",
+      "name": "OpenAI General",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        544,
+        432
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "Personal Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Personal Assistant",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Personal Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI General": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Personal Assistant",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "e5076bf0-975b-4a6d-9d51-6a4b5bc319c9",
+  "meta": {
+    "templateId": "3905",
+    "instanceId": "bb3d566d8ecaecddcd7b1fe4e66f21e5379c0b4d8c972dae0b57ee62a021fec7"
+  },
+  "id": "uaKdqyLOAhO4RlkI",
+  "tags": []
+}

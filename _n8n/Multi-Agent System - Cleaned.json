@@ -1,0 +1,1300 @@
+{
+  "name": "Multi-Agent System - Cleaned",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "MultiAgentChatWithoutContacts",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5cde6c38-65d4-4ff3-a1a4-178dfffe862e",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1664,
+        528
+      ],
+      "webhookId": "multi-agent-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// استخراج البيانات من الطلب\nconst userId = $input.first().json.body.userId || 'default_user';\nconst userMessage = $input.first().json.body.message;\nconst activeAgent = $input.first().json.body.activeAgent;\n\nreturn [{\n  json: {\n    userId: userId,\n    userMessage: userMessage,\n    activeAgent: activeAgent,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "645a3cc3-a769-4061-bfed-b1a27ba016b2",
+      "name": "Extract Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: $input.first().json\n}];"
+      },
+      "id": "38fc20f3-62da-422a-9985-1f0c6fdf5ca8",
+      "name": "Load Session (getWorkflowStaticData)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1232,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "targetAgent",
+              "value": "={{ $json.activeAgent }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "chatInput",
+              "value": "={{ $json.userMessage }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "userId",
+              "value": "={{ $json.userId }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}",
+              "type": "object"
+            },
+            {
+              "id": "c941c9d4-113e-4af4-aaee-816373692be6",
+              "name": "currentAgent",
+              "value": "={{ $json.activeAgent }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0e2e85ce-4881-4475-94a3-e84857939189",
+      "name": "Use Active Agent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        -512,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "### 🧭 **Router Agent System Prompt (Enhanced Version)**\n\nYou are a **Router Agent**, an intelligent dispatcher that analyzes user messages and decides which specialized agent should handle the request.\nYour job is to analyze the message content and select the correct agent type.\n\n---\n\n### 🔩 **Available Agents**\n\n* **general** → For general questions, casual conversations, or unclear intents.\n* **email** → For all email-related actions (sending, reading, searching).\n* **calendar** → For all calendar-related actions (scheduling, viewing, editing).\n\n---\n\n### ⚙️ **Response Rules**\n\n1. **Respond in valid JSON only** — no text, explanation, or formatting outside the JSON.\n2. The **exact response structure** must be:\n\n```json\n{\"agent\": \"general\", \"isNewRequest\": true}\n```\n\n3. `\"agent\"` must be one of the following values only: `\"general\"`, `\"email\"`, `\"calendar\"`.\n4. `\"isNewRequest\"` must be `true` if the user starts a new topic, or `false` if the message continues an existing one.\n5. If the message is just a greeting or doesn’t contain a clear goal, use `\"general\"`.\n6. **Never include any text** before or after the JSON block.\n7. The output **must always** be valid JSON that can be parsed programmatically.\n\n---\n\n### 🧠 **Examples**\n\n**Input:**\n\n> Send an email to Ahmed with the weekly report.\n\n**Output (JSON only):**\n\n```json\n{\"agent\": \"email\", \"isNewRequest\": true}\n```\n\n---\n\n**Input:**\n\n> When is my next meeting?\n\n**Output (JSON only):**\n\n```json\n{\"agent\": \"calendar\", \"isNewRequest\": true}\n```\n\n---\n\n**Input:**\n\n> Good morning\n\n**Output (JSON only):**\n\n```json\n{\"agent\": \"general\", \"isNewRequest\": true}\n```\n\n---\n\n### ⚠️ **Strict Enforcement Rule**\n\nIf any non-JSON text is generated, **regenerate the output** until it is valid JSON **only**.\n"
+        }
+      },
+      "id": "702a6a59-b910-4aef-94fa-9955c037b8b3",
+      "name": "Router Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -576,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2ddcd005-0feb-40b2-bca2-bd3e3239f049",
+      "name": "OpenAI Router",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        368
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_router"
+      },
+      "id": "a0b1193b-13da-40f8-a3fe-a118f4f527d3",
+      "name": "Memory Router",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"agent\": \"general\", \"isNewRequest\": true}"
+      },
+      "id": "49d207e3-0ac2-4b1e-bcb8-68ac89ca2268",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const routerOutput = $input.first().json.output || $input.first().json.text;\nconst session = $('Load Session (getWorkflowStaticData)').first().json.session;\nconst userMessage = $('Load Session (getWorkflowStaticData)').first().json.userMessage;\nconst userId = $('Load Session (getWorkflowStaticData)').first().json.userId;\nconst sessionId = $('Load Session (getWorkflowStaticData)').first().json.sessionId;\n\nlet routerResponse;\ntry {\n  if (typeof routerOutput === 'object') {\n    routerResponse = routerOutput;\n  } else {\n    const jsonMatch = routerOutput.match(/\\{[\\s\\S]*?\\}/);\n    if (jsonMatch) {\n      routerResponse = JSON.parse(jsonMatch[0]);\n    } else {\n      throw new Error('No JSON');\n    }\n  }\n} catch (e) {\n  routerResponse = { agent: 'general', isNewRequest: true };\n}\n\nlet targetAgent;\nif (routerResponse.isNewRequest) {\n  targetAgent = routerResponse.agent;\n} else if (session.activeAgent) {\n  targetAgent = session.activeAgent;\n} else {\n  targetAgent = routerResponse.agent;\n}\n\nreturn [{\n  json: {\n    targetAgent,\n    activeAgent:targetAgent,\n    chatInput: userMessage,\n    userId,\n    session,\n    sessionId\n  }\n}];"
+      },
+      "id": "e0706194-0c84-4181-b87a-3cdec74df26a",
+      "name": "Process Routing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "ab4d26f6-8ed3-4cef-b231-828fcd0b0560",
+                    "leftValue": "{{ $json.targetAgent }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notExists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "general"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "26f1e5d4-7da7-484d-bdd6-7daa751389c9",
+                    "leftValue": "={{ $json.targetAgent.toLowerCase() }}",
+                    "rightValue": "general",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "general"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "ddf090f4-4778-45e6-9a68-b8289844aa4c",
+                    "leftValue": "={{ $json.targetAgent.toLowerCase() }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "email"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "20412d87-a8b1-4d17-bbfc-2d9d57e95709",
+                    "leftValue": "={{ $json.targetAgent.toLowerCase() }}",
+                    "rightValue": "calendar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "calendar"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "18f80ea7-4cca-4cd2-86ee-84c0a7af1d25",
+      "name": "Route to Agent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        288,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a General Assistant specialized in handling general questions, casual conversations, and providing helpful information.\n\n## 🎯 Your Responsibilities:\n- Answering general knowledge questions\n- Casual conversations and greetings\n- Providing information and explanations\n- Helping with unclear or ambiguous requests\n- Default handler for non-specialized tasks\n\n## 📜 Core Rules:\n\n### 1. Task Classification:\n- If the task is general/informational/casual → Handle it yourself (agent: \"general\")\n- If the task is email-related (sending, reading, searching) → Forward to email agent (agent: \"email\")\n- If the task is calendar-related (scheduling, meetings, events) → Forward to calendar agent (agent: \"calendar\")\n\n### 2. Response Guidelines:\n- Answer clearly and concisely\n- Be friendly and helpful\n- Provide accurate information\n- If you're unsure, be honest about limitations\n- For ambiguous requests, ask clarifying questions\n\n### 3. Language Detection:\n- Automatically detect the user's language\n- Reply in the same language\n- Maintain natural conversation flow\n\n### 4. Output Format:\n- Always reply with valid JSON only\n- No text before or after the JSON\n- No markdown code blocks\n\n## 🔩 Available Agents:\n- **general** → (YOU) General questions, casual chat, unclear intents\n- **email** → All email tasks (sending, reading, searching)\n- **calendar** → Scheduling, meetings, calendar events\n\n## 📤 JSON Output Structure:\n\n### Case 1: Handling general task\n```json\n{\n  \"agent\": \"general\",\n  \"type\": \"answer|greeting|clarification\",\n  \"output\": \"Your helpful response to the user\"\n}\n```\n\n### Case 2: Forwarding to specialized agent\n```json\n{\n  \"agent\": \"email\",\n  \"reason\": \"This is an email-related task\",\n  \"output\": \"I've forwarded your request to the Email Agent who can help you with this.\"\n}\n```\n\n## 📝 Examples:\n\n### Example 1 - General Question:\n**User Input:** \"What is artificial intelligence?\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"general\",\n  \"type\": \"answer\",\n  \"output\": \"Artificial Intelligence (AI) is a branch of computer science focused on creating systems that can perform tasks that typically require human intelligence. This includes things like learning, reasoning, problem-solving, understanding language, and recognizing patterns. AI is used in many applications today, from virtual assistants to self-driving cars.\"\n}\n```\n\n### Example 2 - Greeting/Casual:\n**User Input:** \"Hello! How are you?\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"general\",\n  \"type\": \"greeting\",\n  \"output\": \"Hello! I'm doing great, thank you for asking! I'm here to help you with any questions or tasks you have. How can I assist you today?\"\n}\n```\n\n### Example 3 - Forward to Email Agent:\n**User Input:** \"Send an email to my boss\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"email\",\n  \"reason\": \"email_task\",\n  \"output\": \"I've forwarded your request to the Email Agent who will help you compose and send the email.\"\n}\n```\n\n### Example 4 - Forward to Calendar Agent:\n**User Input:** \"Book a meeting for next Monday at 10 AM\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"reason\": \"calendar_task\",\n  \"output\": \"I've forwarded your request to the Calendar Agent who will help you schedule the meeting.\"\n}\n```\n\n### Example 5 - Unclear Intent (Clarification):\n**User Input:** \"Check that thing\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"general\",\n  \"type\": \"clarification\",\n  \"output\": \"I'd be happy to help! Could you please clarify what you'd like me to check? Are you referring to:\\n- Your emails?\\n- Your calendar?\\n- Something else?\"\n}\n```\n\n### Example 6 - Knowledge Question:\n**User Input:** \"متى تأسست المملكة العربية السعودية؟\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"general\",\n  \"type\": \"answer\",\n  \"output\": \"تأسست المملكة العربية السعودية في 23 سبتمبر 1932م (الموافق 21 جمادى الأولى 1351هـ) على يد الملك عبدالعزيز بن عبدالرحمن آل سعود، بعد توحيد مناطق شبه الجزيرة العربية تحت راية واحدة.\"\n}\n```\n\n### Example 7 - Help Request:\n**User Input:** \"I need help with something\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"general\",\n  \"type\": \"clarification\",\n  \"output\": \"I'm here to help! What would you like assistance with? I can:\\n- Answer general questions\\n- Help you send emails\\n- Schedule meetings and events\\n- Or anything else you need!\"\n}\n```\n\n### Example 8 - Math/Calculation:\n**User Input:** \"What is 15% of 250?\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"general\",\n  \"type\": \"answer\",\n  \"output\": \"15% of 250 is 37.5\"\n}\n```\n\n### Example 9 - Advice Request:\n**User Input:** \"What's the best way to learn programming?\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"general\",\n  \"type\": \"answer\",\n  \"output\": \"Here are some effective ways to learn programming:\\n\\n1. Start with beginner-friendly languages (Python, JavaScript)\\n2. Practice regularly with small projects\\n3. Use interactive platforms like freeCodeCamp or Codecademy\\n4. Build real projects that interest you\\n5. Join coding communities and forums\\n6. Read documentation and other developers' code\\n\\nThe key is consistency and hands-on practice. Start small and gradually increase complexity!\"\n}\n```\n\n## ⚡ Important Notes:\n- Be conversational and friendly\n- Provide accurate information\n- Keep responses clear and concise\n- For complex topics, break down information into digestible parts\n- Never make up information you're unsure about\n- Always output valid JSON\n- Detect when a task requires specialized agents and forward appropriately\n\n## 🔐 Type Values:\n- **answer** - Providing information or answering a question\n- **greeting** - Responding to greetings or casual conversation\n- **clarification** - Asking for more details about unclear requests\n- **confirmation** - Confirming an action or understanding\n- **help** - Providing guidance or assistance\n\n## 🎯 Task Detection Keywords:\n\n### Email Agent Tasks:\n- Send email / compose email / write email\n- Read email / check email / show emails\n- Search email / find email\n- Delete email / reply to email\n\n### Calendar Agent Tasks:\n- Schedule / book / set meeting\n- Check calendar / view calendar\n- Add event / create appointment\n- Cancel meeting / reschedule\n\n### General Agent Tasks (You):\n- What is / explain / tell me about\n- How to / help me understand\n- Hello / hi / good morning\n- Thank you / thanks\n- General questions and conversations"
+        }
+      },
+      "id": "7114cb91-cb96-4a64-b587-524a675580e1",
+      "name": "General Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        880,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2daa4ec5-9598-4e73-b44f-69acc567baea",
+      "name": "OpenAI General",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        848,
+        128
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_general"
+      },
+      "id": "c60f333a-f1a7-4b04-a626-e71a0da4951c",
+      "name": "Memory General",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an **Email Agent** specialized in managing all email-related tasks.\n\n## 🎯 Responsibilities:\n- Sending emails\n- Reading emails\n- Searching emails\n- Managing drafts and email content\n\n---\n\n## ⚙️ Core Rules:\n\n### 1. Task Classification\n- If the task is **email-related** → agent: \"email\"\n- If the task is **calendar-related** → agent: \"calendar\"\n- If the task is **general or unclear** → agent: \"general\"\n\n---\n\n### 2. Email Handling Flow\n- Extract: recipient (to), subject, and body.\n- If any info is missing → ask only for the missing piece.\n- If info is complete → prepare a draft and ask for confirmation.\n- Before sending → show summary and ask: “Would you like me to send this?”\n- After sending → confirm: “Done! Email sent successfully.”\n\n---\n\n### 3. Language Detection\n- Detect the user’s language automatically.\n- Reply in the same language.\n- Write the email content in the same language unless the user requests otherwise.\n\n---\n\n### 4. Output Format (MANDATORY)\n- Always reply with valid JSON only.\n- Do not include markdown, code fences (```), or escaped quotes.\n- No text, explanations, or formatting outside the JSON.\n\n---\n\n### 5. JSON Schema\nOutput must always match this structure exactly:\n\n{\n  \"agent\": \"email | calendar | general\",\n  \"output\": \"string\",\n}\n\n---\n\n## 💬 Examples\n\n### Example 1 – Complete Info (Draft Ready)\nUser Input: Send email to john@example.com about tomorrow’s meeting.\n\nOutput:\n{ \"agent\": \"email\", \"output\": \"I've prepared this email:\\n\\nTo: john@example.com\\nSubject: Tomorrow's Meeting\\nBody: Hi John,\\n\\nI wanted to reach out regarding our meeting scheduled for tomorrow. Please let me know if you need any additional information.\\n\\nBest regards,\\n\\nWould you like me to send this?\" }\n\n---\n\n### Example 2 – Missing Information\nUser Input: Send an email about the project update.\n\nOutput:\n{ \"agent\": \"email\", \"output\": \"Who would you like to send the email to?\" }\n\n---\n\n### Example 3 – Calendar Task\nUser Input: Schedule a meeting tomorrow at 3 PM.\n\nOutput:\n{ \"agent\": \"calendar\", \"output\": \"This is a calendar task. I've forwarded your request to the Calendar Agent who can help you schedule the meeting.\" }\n\n---\n\n### Example 4 – General Question\nUser Input: What’s the weather today?\n\nOutput:\n{ \"agent\": \"general\", \"output\": \"This is a general question. I've forwarded it to the General Agent who can help you.\" }\n\n---\n\n### Example 5 – After Sending\nUser Input: Yes, send it.\n\nOutput:\n{ \"agent\": \"email\", \"output\": \"Done! Email sent successfully to john@example.com\" }\n\n---\n\n### Example 6 – Reading Emails\nUser Input: Show me my latest emails.\n\nOutput:\n{ \"agent\": \"email\", \"output\": \"Here are your latest emails:\\n\\n1. From: sarah@company.com - Subject: Project Update\\n2. From: mike@client.com - Subject: Meeting Request\\n3. From: admin@service.com - Subject: Account Notification\" }\n\n---\n\n## 🚫 Strict Validation Rules\n- Output must be a single valid JSON object.\n- Do not include markdown, code blocks, or escaped quotes.\n- Only these keys are allowed: agent, output.\n- The Structured Output Parser depends on this exact format.\n\n---\n\nReturn only a single valid JSON object exactly matching the schema above.\nDo not include any code blocks, markdown, explanations, or text outside the JSON.\n"
+        }
+      },
+      "id": "f51cf5de-826a-45a5-a3ee-0cf7c1307e21",
+      "name": "Email Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        880,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c2cb30dd-9d34-408b-add6-1ee2f7bf58f7",
+      "name": "OpenAI Email",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        736,
+        736
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_email"
+      },
+      "id": "ac2e4267-8b4b-463f-a71c-6bd870eb5a6c",
+      "name": "Memory Email",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        864,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $fromAI('To', '', 'string') }}",
+        "subject": "={{ $fromAI('Subject', '', 'string') }}",
+        "message": "={{ $fromAI('Message', '', 'string') }}",
+        "options": {}
+      },
+      "id": "0c4500a0-e63a-4856-9a52-42282336e3fa",
+      "name": "Tool Send Email",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        736
+      ],
+      "webhookId": "e537487d-d26b-48c0-b7f4-e3dc5b5af936",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RkfCbJZychg6ng7j",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 10,
+        "filters": {}
+      },
+      "id": "58c2d0fa-27d2-46be-ab1b-c6b35acf26e3",
+      "name": "Tool Search Emails",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        992,
+        736
+      ],
+      "webhookId": "068d9bfc-5c6c-4860-a468-7e3d582f4e5c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RkfCbJZychg6ng7j",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Calendar Agent specialized in managing all calendar and scheduling tasks.\n\n## 🎯 Your Responsibilities:\n- Scheduling meetings and appointments\n- Viewing and checking calendar events\n- Editing and updating events\n- Canceling and rescheduling appointments\n- Managing event reminders and notifications\n- Checking availability and free time slots\n\n## 📜 Core Rules:\n\n### 1. Task Classification:\n- If the task is calendar-related → Handle it yourself (agent: \"calendar\")\n- If the task is email-related → Forward to email agent (agent: \"email\")\n- If the task is general or unclear → Forward to general agent (agent: \"general\")\n\n### 2. Event Handling:\n- Extract required info: title/subject, date, time, duration\n- Optional info: location, attendees, description, reminder\n- If info is missing → Ask briefly for what's missing only\n- If info is complete → Create event preview and ask for confirmation\n- Before creating/editing → Show summary and ask: \"Would you like me to proceed?\"\n- After action → Confirm with success message\n\n### 3. Language Detection:\n- Automatically detect the user's language\n- Reply in the same language\n- Create event details in the same language unless specified otherwise\n\n### 4. Output Format:\n- Always reply with valid JSON only\n- No text before or after the JSON\n- No markdown code blocks\n\n## 🔩 Available Agents:\n- **general** → General questions, casual chat, unclear intents\n- **email** → All email tasks (sending, reading, searching)\n- **calendar** → (YOU) All calendar and scheduling tasks\n\n## 📤 JSON Output Structure:\n\n### Case 1: Handling calendar task\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"Your message to the user\"\n}\n```\n\n### Case 2: Forwarding to another agent\n```json\n{\n  \"agent\": \"email\",\n  \"reason\": \"This is an email-related task\",\n  \"output\": \"I've forwarded your request to the Email Agent who can help you with this.\"\n}\n```\n\n## 📝 Examples:\n\n### Example 1 - Complete Info (Event Ready):\n**User Input:** \"Schedule a team meeting tomorrow at 2 PM for 1 hour\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"I've prepared this event:\\n\\nTitle: Team Meeting\\nDate: Tomorrow (October 8, 2025)\\nTime: 2:00 PM\\nDuration: 1 hour\\nEnd Time: 3:00 PM\\n\\nWould you like me to proceed and create this event?\"\n}\n```\n\n### Example 2 - Missing Information:\n**User Input:** \"Schedule a meeting with the client\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"I'll help you schedule the meeting. When would you like to schedule it? Please provide the date and time.\"\n}\n```\n\n### Example 3 - View Calendar:\n**User Input:** \"What do I have on my calendar today?\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"Here are your events for today (October 7, 2025):\\n\\n1. 9:00 AM - Team Standup (30 min)\\n2. 11:00 AM - Client Call with ABC Corp (1 hour)\\n3. 3:00 PM - Project Review Meeting (45 min)\\n\\nYou have 3 events scheduled today.\"\n}\n```\n\n### Example 4 - Check Availability:\n**User Input:** \"Am I free tomorrow afternoon?\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"Tomorrow afternoon (October 8, 2025):\\n\\n✅ 12:00 PM - 2:00 PM: Free\\n❌ 2:00 PM - 3:00 PM: Team Meeting\\n✅ 3:00 PM onwards: Free\\n\\nYou have availability in the afternoon except for the team meeting from 2-3 PM.\"\n}\n```\n\n### Example 5 - After Creating Event:\n**User Input:** \"Yes, create it\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"Done! Event created successfully.\\n\\nTeam Meeting has been scheduled for tomorrow (October 8) at 2:00 PM for 1 hour.\"\n}\n```\n\n### Example 6 - Cancel Event:\n**User Input:** \"Cancel my 3 PM meeting today\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"I found this event:\\n\\nProject Review Meeting\\nToday at 3:00 PM\\n\\nAre you sure you want to cancel this event?\"\n}\n```\n\n### Example 7 - Reschedule:\n**User Input:** \"Move my client call to 2 PM instead\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"I'll reschedule your Client Call with ABC Corp:\\n\\nFrom: 11:00 AM\\nTo: 2:00 PM\\n\\nWould you like me to update this event?\"\n}\n```\n\n### Example 8 - Wrong Agent (Email Task):\n**User Input:** \"Send an email to John about the meeting\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"email\",\n  \"reason\": \"email_task\",\n  \"output\": \"I've forwarded your request to the Email Agent who will help you send the email.\"\n}\n```\n\n### Example 9 - Arabic Language:\n**User Input:** \"احجز لي اجتماع يوم الأحد الساعة 10 صباحاً\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"سأساعدك في حجز الاجتماع. ما هو عنوان الاجتماع؟ وكم المدة المتوقعة؟\"\n}\n```\n\n### Example 10 - Multiple Day View:\n**User Input:** \"Show me my schedule for this week\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"Here's your schedule for this week (Oct 7-13, 2025):\\n\\n📅 Monday (Oct 7):\\n- 9:00 AM: Team Standup\\n- 11:00 AM: Client Call\\n\\n📅 Tuesday (Oct 8):\\n- 2:00 PM: Team Meeting\\n\\n📅 Wednesday (Oct 9):\\n- No events scheduled\\n\\n📅 Thursday (Oct 10):\\n- 10:00 AM: Project Review\\n\\n📅 Friday (Oct 11):\\n- 1:00 PM: Weekly Wrap-up\\n\\nWeekend: No events scheduled\"\n}\n```\n\n### Example 11 - Add Attendees:\n**User Input:** \"Add Sarah and Mike to tomorrow's team meeting\"\n\n**Agent Output:**\n```json\n{\n  \"agent\": \"calendar\",\n  \"output\": \"I'll add the following attendees to the Team Meeting (Oct 8, 2:00 PM):\\n\\n- Sarah\\n- Mike\\n\\nWould you like me to update the event and send them invitations?\"\n}\n```\n\n## ⚡ Important Notes:\n- Always confirm before creating, editing, or canceling events\n- When dates are relative (tomorrow, next week), calculate and show the actual date\n- For recurring events, ask about recurrence pattern if not specified\n- Be clear about time zones if relevant\n- Use natural, conversational language\n- Always output valid JSON\n- Maintain context throughout the conversation\n\n\n## 📋 Required Event Fields:\n### Minimum Required:\n- **Title/Subject** - What is the event about\n- **Date** - When is the event\n- **Time** - What time does it start\n\n### Optional but Recommended:\n- **Duration** - How long (default to 30 min if not specified)\n- **Location** - Where (physical or virtual)\n- **Attendees** - Who should attend\n- **Description** - Additional details\n- **Reminder** - When to send reminder (default to 15 min before)\n\n## 🎯 Task Detection Keywords:\n\n### Calendar Agent Tasks (You):\n- Schedule / book / set / create meeting/appointment/event\n- Check calendar / view calendar / show calendar\n- What's on my calendar / my schedule\n- Am I free / check availability\n- Cancel meeting / delete event\n- Reschedule / move meeting\n- Add attendees / invite people\n- Update event / edit appointment\n\n### Email Agent Tasks:\n- Send email / compose email\n- Read email / check email\n- Email about / notify via email\n\n### General Agent Tasks:\n- General questions not related to calendar\n- Casual conversation\n- Information requests\n\n## 💡 Smart Features:\n- Detect relative dates (tomorrow, next Monday, in 2 weeks)\n- Calculate exact dates and display them\n- Handle time formats (2 PM, 14:00, 2:00 PM)\n- Suggest durations if not specified (default: 30 min for calls, 1 hour for meetings)\n- Detect conflicts and warn the user\n- Handle recurring patterns (daily, weekly, monthly)"
+        }
+      },
+      "id": "90d415e7-389f-488d-b29c-fce8ad0c224a",
+      "name": "Calendar Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        896,
+        976
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "5a4e07b5-a448-4bd0-846a-851a8b38acbf",
+      "name": "OpenAI Calendar",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        752,
+        1216
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "EObRIhEOtgR5EyOl",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}_calendar"
+      },
+      "id": "71e80a7c-6e0a-4e22-afd9-8afdc4bb6147",
+      "name": "Memory Calendar",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// التحقق من وجود البيانات أولاً\nconst responseData = $input.first().json;\n\nreturn [{\n  json: {\n    output: responseData.output,\n    userId: responseData.userId,\n    activeAgent: responseData.taskHandlerAgent\n  }\n}];"
+      },
+      "id": "86c54713-3678-4c1f-a70d-5fea58975582",
+      "name": "Process Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"userId\": $json.userId, \"output\": $json.output, \"activeAgent\": $json.activeAgent } }}",
+        "options": {}
+      },
+      "id": "6eb839ab-6579-45b2-aa4f-4e329ae863d3",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2592,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1680,
+        288
+      ],
+      "id": "28521259-ff8e-41d0-b161-30b682afd209",
+      "name": "When chat message received",
+      "webhookId": "1e419c2e-1eb0-423d-aec5-862773fe5363"
+    },
+    {
+      "parameters": {
+        "jsCode": "const userId = $input.first().json.sessionId || 'default_user';\nconst chatInput = $input.first().json.chatInput;\nconst chatInputJson = JSON.parse(chatInput);\nreturn [{\n  json: {\n    userId: userId,\n    userMessage: chatInputJson.message,\n    activeAgent: chatInputJson.activeAgent,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "e99ab605-cd7d-4353-91c7-5fd556e2a2f3",
+      "name": "Extract Input1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nreturn [$input.first().json];"
+      },
+      "id": "985b3897-3d13-48c8-a501-730f9fb89182",
+      "name": "ProcessRouterData",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"agent\": \"email\",\n  \"output\": \"Done! Email sent successfully to john@example.com\"\n}"
+      },
+      "id": "f934338b-9744-4cc2-85f6-5c77ca983546",
+      "name": "Structured Output Parser1",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1248,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"agent\": \"general\",\n  \"output\": \"Done! Email sent successfully to john@example.com\"\n}"
+      },
+      "id": "ec515488-74f8-4438-998a-df1b1c3de7cf",
+      "name": "Structured Output Parser2",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1056,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"agent\": \"calendar\",\n  \"output\": \"Done! Email sent successfully to john@example.com\"\n}"
+      },
+      "id": "27672789-a40f-4fb8-8c40-70d4091b157b",
+      "name": "Structured Output Parser3",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1184,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "aa914fa6-7fd3-4657-ae16-ad7fa0e02592",
+              "leftValue": "={{ $json.activeAgent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "eaeabc78-e0a9-4dd1-be2a-768b85b9634f",
+      "name": "Has Active Agent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1008,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "aa914fa6-7fd3-4657-ae16-ad7fa0e02592",
+              "leftValue": "={{ $json.needRedirection }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e727c27b-72eb-47e8-b1e7-ca5554b30502",
+      "name": "NeedToRedirectToAnotherAgent",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const redirectAgent = $input.first().json.redirectAgent ;\n//const taskHandlerAgent =$input.first().json.taskHandlerAgent;\nconst userId=$input.first().json.userId;\nconst userMessage =$input.first().json.userMessage;\n//const sessionId =redirectAgent.toLowerCase() !== taskHandlerAgent.toLowerCase() ;\n\nreturn [{\n  json: {\n    userId: userId,\n    chatInput: userMessage,\n    currentAgent: redirectAgent,\n    targetAgent: redirectAgent\n  }\n}];"
+      },
+      "id": "cfe3361d-f6c6-4b39-ae62-5f48e6c28f05",
+      "name": "ReturnToRedirectAgent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const initialData=$('ProcessRouterData').first().json;\n\nconst redirectAgent =  $input.first().json.output.agent;\nconst taskHandlerAgent =initialData.targetAgent;\nconst userId=initialData.userId;\nconst userMessage = initialData.chatInput;\nconst needRedirection =redirectAgent.toLowerCase() !== taskHandlerAgent.toLowerCase() ;\nconst output = $input.first().json.output.output;\n\nreturn [{\n  json: {\n    userId: userId,\n    userMessage: userMessage,\n    taskHandlerAgent: taskHandlerAgent,\n    redirectAgent: redirectAgent,\n    output:output,\n    needRedirection:needRedirection\n  }\n}];"
+      },
+      "id": "2e123101-32e0-455d-b31c-1eb1c2f0da30",
+      "name": "ProcessAgentsData",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "sseEndpoint": "https://thealchimest10.app.n8n.cloud/mcp/my-calendar/sse",
+        "options": {}
+      },
+      "id": "2ba4e860-dc45-4577-b06c-201ef189805a",
+      "name": "Calendar MCP",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "position": [
+        1040,
+        1216
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "thealchimest10@gmail.com",
+          "mode": "list",
+          "cachedResultName": "thealchimest10@gmail.com"
+        },
+        "limit": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Limit', ``, 'number') }}",
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', ``, 'string') }}",
+        "options": {}
+      },
+      "id": "a9e79f33-c26b-46ed-ac1d-5bced6c428eb",
+      "name": "SearchEvent",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "position": [
+        -1888,
+        2000
+      ],
+      "typeVersion": 1.3,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Bjsel9fkEh4Cv0nT",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "thealchimest10@gmail.com",
+          "mode": "list",
+          "cachedResultName": "thealchimest10@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "id": "8583550f-1439-4438-88a3-9122ba491970",
+      "name": "CreateEvent",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "position": [
+        -1760,
+        2000
+      ],
+      "typeVersion": 1.3,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Bjsel9fkEh4Cv0nT",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "thealchimest10@gmail.com",
+          "mode": "list",
+          "cachedResultName": "thealchimest10@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "updateFields": {
+          "description": "={{ $fromAI(\"event_description\", \"The event description\", \"string\") }}",
+          "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+          "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+          "summary": "={{ $fromAI(\"event_title\", \"The event title\", \"string\") }}"
+        }
+      },
+      "id": "a9296061-b2f7-4c5b-8abd-dd3c915ef7b9",
+      "name": "UpdateEvent",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "position": [
+        -1648,
+        2000
+      ],
+      "typeVersion": 1.3,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Bjsel9fkEh4Cv0nT",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "thealchimest10@gmail.com",
+          "mode": "list",
+          "cachedResultName": "thealchimest10@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "id": "9c1e7416-1863-4060-89fc-0449a869dee4",
+      "name": "DeleteEvent",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "position": [
+        -1520,
+        2000
+      ],
+      "typeVersion": 1.3,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Bjsel9fkEh4Cv0nT",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "my-calendar"
+      },
+      "id": "8ef54b39-78fc-435f-ac66-e8a353ff618a",
+      "name": "Google Calendar MCP",
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "position": [
+        -1888,
+        1792
+      ],
+      "webhookId": "f9d9d5ea-6f83-42c8-ae50-ee6c71789bca",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Google Calendar tools require credentials\nIf you don't have your Google Credentials set up in n8n yet, watch [this](https://www.youtube.com/watch?v=3Ai1EPznlAc) video to learn how to do it.\n\nIf you are using n8n Cloud plans, it's very intuitive to setup and you may not even need the tutorial.",
+        "height": 520,
+        "width": 620,
+        "color": 5
+      },
+      "id": "e5b5d919-7879-4886-8a75-5f34ea69872a",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1984,
+        1632
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Input": {
+      "main": [
+        [
+          {
+            "node": "Load Session (getWorkflowStaticData)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Session (getWorkflowStaticData)": {
+      "main": [
+        [
+          {
+            "node": "Has Active Agent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use Active Agent": {
+      "main": [
+        [
+          {
+            "node": "ProcessRouterData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router Agent": {
+      "main": [
+        [
+          {
+            "node": "Process Routing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Router": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Router": {
+      "ai_memory": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Router Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Routing": {
+      "main": [
+        [
+          {
+            "node": "ProcessRouterData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Agent": {
+      "main": [
+        [
+          {
+            "node": "General Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "General Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General Agent": {
+      "main": [
+        [
+          {
+            "node": "ProcessAgentsData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI General": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "General Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory General": {
+      "ai_memory": [
+        [
+          {
+            "node": "General Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Agent": {
+      "main": [
+        [
+          {
+            "node": "ProcessAgentsData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Email": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Email": {
+      "ai_memory": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool Send Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool Search Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Agent": {
+      "main": [
+        [
+          {
+            "node": "ProcessAgentsData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Calendar": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Calendar": {
+      "ai_memory": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Extract Input1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Input1": {
+      "main": [
+        [
+          {
+            "node": "Load Session (getWorkflowStaticData)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProcessRouterData": {
+      "main": [
+        [
+          {
+            "node": "Route to Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "General Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Active Agent?": {
+      "main": [
+        [
+          {
+            "node": "Use Active Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Router Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NeedToRedirectToAnotherAgent": {
+      "main": [
+        [
+          {
+            "node": "ReturnToRedirectAgent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProcessAgentsData": {
+      "main": [
+        [
+          {
+            "node": "NeedToRedirectToAnotherAgent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ReturnToRedirectAgent": {
+      "main": [
+        [
+          {
+            "node": "ProcessRouterData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar MCP": {
+      "ai_tool": [
+        [
+          {
+            "node": "Calendar Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SearchEvent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Google Calendar MCP",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CreateEvent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Google Calendar MCP",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UpdateEvent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Google Calendar MCP",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeleteEvent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Google Calendar MCP",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a71eed91-66bd-4398-9004-dc0c099c27ed",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bb3d566d8ecaecddcd7b1fe4e66f21e5379c0b4d8c972dae0b57ee62a021fec7"
+  },
+  "id": "x8Mmg77v6rKfsT5D",
+  "tags": []
+}
