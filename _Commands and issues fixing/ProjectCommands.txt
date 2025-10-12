@@ -16,6 +16,7 @@ python main.py
 Configured Rasp 
 =========================
 cd ~/apps/Robot_App/Robot_App_05
+/apps/Robot_App/Robot_App_05_Zero
 pyenv local 3.10.0
 python -m venv .venv
 source .venv/bin/activate

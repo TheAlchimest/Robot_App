@@ -1,0 +1,20 @@
+﻿# Core
+requests==2.32.3
+
+# Audio backends (اختَر من Config: alsa/aplay/pygame)
+pyalsaaudio==0.10.0
+pygame==2.6.1
+
+# Recording (اختياري لو هتعتمد على arecord)
+pyaudio==0.2.14
+
+# VAD لقصّ الصمت في STT (اختياري لكنه مفيد)
+webrtcvad==2.0.10
+
+# Vision stack
+opencv-python==4.10.0.84
+mediapipe==0.10.18
+cvzone==1.6.1
+
+# Dependencies commonly needed by vision libs
+numpy>=1.24.0
