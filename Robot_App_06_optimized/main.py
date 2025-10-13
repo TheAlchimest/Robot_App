@@ -13,16 +13,20 @@ from queue import Queue, Empty
 import time
 from local_commands import handle_local_command
 import eye_runner as eye
-import eye_runner_zero  as eyeZero
+# import eye_runner_zero  as eyeZero
 # import face_tracker as tracker
 # import video_eye_player as eye
 import os
 import re
-
+import sys
+import traceback
 # ------------------- Environment Setup -------------------
-os.environ.setdefault("DISPLAY", ":0")
-os.environ.setdefault("XAUTHORITY", "/home/pi/.Xauthority")
-os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
+# for Raspberry Pi
+if sys.platform.startswith("linux"):
+    os.environ.setdefault("DISPLAY", ":0")
+    os.environ.setdefault("XAUTHORITY", "/home/pi/.Xauthority")
+    os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
+
 
 # ------------------- Initialize Components -------------------
 recorder = AudioRecorder()
@@ -31,9 +35,10 @@ tts = TextToSpeech()
 n8n = N8nClient()
 
 # ------------------- Queues for Thread Communication -------------------
-audio_queue = Queue()
-text_queue = Queue()
-response_queue = Queue()
+audio_queue = Queue(maxsize=3)
+text_queue = Queue(maxsize=3)
+response_queue = Queue(maxsize=3)
+
 
 from Config import Config
 config = Config()
@@ -138,7 +143,7 @@ STOP_TOKENS = [
     # English
     "stop","end","cancel","enough","quit","exit","abort","halt",
     # Arabic MSA + dialects
-    "قف","توقف","وقف","بس","خلص","خلاص","كفايه","كفاية","ستوب","باركا",  # مغربي: باركا
+    "قف","توقف","وقف","بس","خلص","خلاص","كفايه","كفاية","ستوب","وقف التشغيل","اسكت","اسكت شوي","كفا","خلصنا","خلاص كده",  
 ]
 
 # precompile: start-of-line + token + boundary (space/end/any non-letter/number)
@@ -151,63 +156,99 @@ def is_stop_command(text: str) -> bool:
         return True
     return STOP_RE.search(_normalize_ar(text or '')) is not None
 
+
+
+def safe_put(q, item):
+    try:
+        q.put_nowait(item)
+    except:
+        try: q.get_nowait()  # drop oldest
+        except Empty: pass
+        q.put_nowait(item)
+
+
+# ------------------- Utility Methods -------------------
+def speak_safe(text: str):
+    """Speak safely with basic interruption handling."""
+    if not text:
+        return
+    try:
+        tts.interrupt()
+    except Exception:
+        pass
+    try:
+        tts.say(text)
+    except Exception as ex:
+        print(f"❌ Speech error: {ex}")
+
+def cleanup():
+    """Cleanup resources gracefully."""
+    try:
+        eye.cleanup()
+    except Exception:
+        pass
+    try:
+        recorder.close()
+    except Exception:
+        pass
+    try:
+        tts.interrupt()
+        tts.cleanup()
+    except Exception:
+        pass
+    try:
+        stt.cleanup()
+    except Exception:
+        pass
+
+
 # ================= Worker Threads =================
 
 def audio_recording_thread():
-    """
-    Thread dedicated to recording audio with interruption detection
-    Continuously records audio and puts it in the queue
-    """
     while system_state.is_active:
         try:
-             
-            print(f"system_state.is_speaking: {system_state.is_speaking}")
-            print(f"allow_interruption: {allow_interruption}")
-            if system_state.is_speaking and  not allow_interruption:
+            if system_state.is_speaking and not allow_interruption:
+                time.sleep(0.05)
                 continue
 
-            # Continuous recording
             audio_buffer = recorder.record_until_silence(
                 silence_threshold=500,
                 silence_duration=1.5,
                 max_duration=20
             )
-            
-            # Optional: Detect interruption during speaking
-            # Uncomment if you want to detect interruption during recording
-            '''
-            if system_state.get_speaking():
-                print("\n🔴 INTERRUPT DETECTED!")
-                system_state.interrupt()
-            '''
-            
-            audio_queue.put(audio_buffer)
-            
+            if audio_buffer:
+                audio_queue.put(audio_buffer)
+
         except Exception as e:
             print(f"❌ Recording error: {e}")
-            time.sleep(1)
+            time.sleep(0.5)
 
 
 def speech_to_text_thread():
-    """
-    Thread dedicated to converting speech to text
-    Processes audio from queue and converts to text
-    """
     while system_state.is_active:
         try:
             audio_buffer = audio_queue.get(timeout=1)
             user_input = stt.transcribe_bytes(audio_buffer)
             print(f"\n🎤 User: {user_input}")
-            
-            if not system_state.is_speaking:
-                    text_queue.put(user_input)
 
-            elif allow_interruption and user_input:
-                if is_stop_command(user_input):
-                    # Interrupt any ongoing processes
+            if not user_input:
+                continue
+
+            if is_stop_command(user_input):
+                system_state.interrupt()
+                text_queue.put(user_input)
+                continue
+
+            if system_state.get_speaking():
+                if allow_interruption:
                     system_state.interrupt()
                     text_queue.put(user_input)
-                
+                else:
+                    # تجاهل الكلام أثناء التحدث إن ما كانتش كلمة إيقاف
+                    pass
+            else:
+                text_queue.put(user_input)
+
         except Empty:
             continue
         except Exception as e:
@@ -234,16 +275,17 @@ def ai_processing_thread():
             elif action == 'resume':
                 system_state.resume_listening()
                 print("✅ System resumed - ready to help!")
-            
+            '''
             # Send response
             if local_response:
                 print(F"local_response : {local_response}")
-                response_queue.put(local_response)
+                safe_put(response_queue,local_response)
+            '''
             
             if should_continue and system_state.should_listen():
                 print("🤔 Processing with AI...")
                 response = n8n.chat("123456",user_input)
-                response_queue.put(response)
+                safe_put(response_queue,local_response)
                 print(response)
             
         except Empty:
@@ -267,7 +309,7 @@ def text_to_speech_thread():
                 system_state.set_speaking(True)
                 
                 # Speak (with possible interruption)
-                tts.say(response)
+                speak_safe(response)
                 
                 # Finished speaking
                 system_state.set_speaking(False)
@@ -278,7 +320,8 @@ def text_to_speech_thread():
         except Exception as e:
             print(f"❌ Text-to-speech error: {e}")
             system_state.set_speaking(False)
-
+        finally:
+            system_state.set_speaking(False)
 
 def status_monitor_thread():
     """
@@ -304,6 +347,7 @@ def main():
     Main function with intelligent state and interruption management
     """
     pygame.init()
+    """
     
     # Print startup banner
     print("=" * 60)
@@ -323,9 +367,10 @@ def main():
     print("  • Just start speaking and it will stop immediately")
     print("  • All pending processes will be cancelled")
     print("=" * 60)
+    """
     
     # Welcome message
-    tts.say("Hello, I'm ready to help you.")
+    speak_safe("Hello, I'm ready to help you.")
     
     # Create and start threads
     threads = [
@@ -333,8 +378,9 @@ def main():
         # threading.Thread(target=tracker.trackUserFace, name="FaceTracker", args=(False,)),
         # threading.Thread(target=tracker.naturalEyeMovement, name="naturalEyeMovement", args=(False,)),
         # threading.Thread(target=eye.playEyeVideo, name="playEyeVideo"),
-        # threading.Thread(target=eye.run, name="eye"),
-        threading.Thread(target=eyeZero.run, name="eye"),
+        #threading.Thread(target=eye.run, name="eye", daemon=True),
+
+        # threading.Thread(target=eyeZero.run, name="eye", daemon=True),
         threading.Thread(target=audio_recording_thread, daemon=True, name="AudioRecorder"),
         threading.Thread(target=speech_to_text_thread, daemon=True, name="SpeechToText"),
         threading.Thread(target=ai_processing_thread, daemon=True, name="AIProcessor"),
@@ -361,20 +407,9 @@ def main():
         print("⛔ Shutting down system...")
         system_state.stop_system()
         
-        # Cleanup TTS
-        try:
-            tts.interrupt()
-            tts.cleanup()
-        except Exception:
-            pass
-
-        # Cleanup STT
-        try:
-            stt.cleanup()
-        except Exception:
-            pass
+        cleanup()
         
-        # Cleanup face tracker (if enabled)
+
         # tracker.closeAllWindows()
         
         print("✅ System stopped successfully")

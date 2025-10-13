@@ -56,6 +56,7 @@ class N8nClient:
 
         payload = {
             "userId": userId,
+            "activeAgent":"general",
             "message": message.strip()
         }
 

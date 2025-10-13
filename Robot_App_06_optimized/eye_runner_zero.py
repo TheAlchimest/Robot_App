@@ -1,68 +1,83 @@
 # -*- coding: utf-8 -*-
-# Eyes Blink Boxes (Two synced squares)
-# Works fullscreen, optimized for Raspberry Pi Zero
-# 3 states: open -> half -> closed -> half -> open
-
 import os, time, platform
 import pygame
 
-# ---------------- إعدادات عامة ----------------
-RENDER_W, RENDER_H = 480, 320     # حجم الشاشة
-BG_COLOR  = (0, 0, 0)             # خلفية سوداء
-EYE_COLOR = (255, 255, 255)       # لون المربعات (العينين)
-EYE_SIZE  = 120                   # طول ضلع المربع الأساسي
-BLINK_DELAY = 0.25                # زمن الانتقال بين الحالات
-BLINK_PAUSE = 2.5                 # زمن بقاء العين مفتوحة بين كل رمشة
+RENDER_W, RENDER_H = 480, 320
+BG_COLOR  = (0, 0, 0)
+EYE_COLOR = (255, 255, 255)
+EYE_SIZE  = 120
+BLINK_DELAY = 0.25
+BLINK_PAUSE = 2.5
 
-# ---------------- تفعيل KMSDRM للراسبيري ----------------
 def is_pi():
     m = platform.machine().lower()
     return ("arm" in m) or ("aarch64" in m) or ("raspberry" in platform.platform().lower())
 
-if is_pi() and not os.environ.get("DISPLAY"):
-    os.environ.setdefault("SDL_VIDEODRIVER", "kmsdrm")
-
-# ---------------- تهيئة الشاشة ----------------
-pygame.init()
-screen = pygame.display.set_mode((RENDER_W, RENDER_H), pygame.FULLSCREEN, 32)
-pygame.mouse.set_visible(False)
-
-# ---------------- دالة رسم العينين ----------------
-def draw_eyes(state):
+def init_display():
     """
-    state: 0 = مفتوحة / 1 = نصف مغلقة / 2 = مغلقة
+    يحاول يفتح الشاشة بالترتيب:
+    1) X11 لو فيه DISPLAY
+    2) KMSDRM على الكونسول
+    3) fbcon كحل أخير
+    ويجبر Software Renderer علشان ماينشئش GL context
     """
+    # امنع أي تسريع OpenGL/ES
+    os.environ["SDL_RENDER_DRIVER"] = "software"
+    os.environ["PYGAME_BLEND_ALPHA_SDL2"] = "1"  # آمن
+
+    drivers = []
+    if os.environ.get("DISPLAY"):
+        drivers = ["x11", "kmsdrm", "fbcon"]
+    else:
+        # على الراسبي بدون سطح مكتب
+        drivers = ["kmsdrm", "fbcon"]
+
+    last_err = None
+    for drv in drivers:
+        try:
+            os.environ["SDL_VIDEODRIVER"] = drv
+            pygame.display.quit()
+            pygame.display.init()
+            flags = pygame.FULLSCREEN | pygame.SCALED | pygame.DOUBLEBUF
+            screen = pygame.display.set_mode((RENDER_W, RENDER_H), flags, 32)
+            pygame.mouse.set_visible(False)
+            return screen
+        except Exception as e:
+            last_err = e
+            continue
+    raise RuntimeError(f"Failed to init display with software renderer. Last error: {last_err}")
+
+# --- نفس دالة الرسم بتاعتك ---
+def draw_eyes(screen, state):
     screen.fill(BG_COLOR)
-
-    # مواضع العينين
     spacing = 60
     total_width = (EYE_SIZE * 2) + spacing
     start_x = (RENDER_W - total_width) // 2
     y_center = RENDER_H // 2
 
-    # حساب ارتفاع المربع حسب الحالة
-    if state == 0:      # مفتوحة
+    if state == 0:
         h_factor = 1.0
-    elif state == 1:    # نصف مغلقة
+    elif state == 1:
         h_factor = 0.5
-    else:               # مغلقة
+    else:
         h_factor = 0.1
 
     new_h = int(EYE_SIZE * h_factor)
     y_top = y_center - new_h // 2
 
-    # رسم العين اليسرى
     pygame.draw.rect(screen, EYE_COLOR, (start_x, y_top, EYE_SIZE, new_h))
-    # رسم العين اليمنى
     pygame.draw.rect(screen, EYE_COLOR, (start_x + EYE_SIZE + spacing, y_top, EYE_SIZE, new_h))
-
     pygame.display.flip()
 
-# ---------------- الحلقة الرئيسية ----------------
 def run():
-    blink_sequence = [0, 1, 2, 1, 0]  # فتح → نصف → غلق → نصف → فتح
+    # pygame.init()
+    screen = init_display()  # ← الجديد
+    blink_sequence = [0, 1, 2, 1, 0]
     running = True
     last_blink = time.time()
+
+    # ارسم أول لقطة مفتوحة فورًا
+    draw_eyes(screen, 0)
 
     try:
         while running:
@@ -72,27 +87,16 @@ def run():
                 elif e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                     running = False
 
-            # نفّذ دورة رمش كل فترة محددة
             now = time.time()
             if now - last_blink >= BLINK_PAUSE:
                 for state in blink_sequence:
-                    draw_eyes(state)
+                    draw_eyes(screen, state)
                     time.sleep(BLINK_DELAY)
                 last_blink = time.time()
     except KeyboardInterrupt:
         print("\n⚠️  Interrupted by user")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
-
-    pygame.quit()
-
-
-
-# ==========================================
-# MAIN
-# ==========================================
+    finally:
+        pygame.quit()
 
 if __name__ == "__main__":
     run()

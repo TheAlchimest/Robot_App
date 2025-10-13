@@ -411,6 +411,7 @@ def run():
 
 
 def cleanup():
+    eye_state.stop()
     """تنظيف الموارد"""
     print("\n🧹 Cleaning up...")
     
@@ -427,7 +428,7 @@ def cleanup():
 # ==========================================
 
 def run_eyes_threaded():
-    naturalEyeMovement()
+    run()
 
 
 # ==========================================

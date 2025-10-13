@@ -51,3 +51,12 @@ def handle_local_command(user_text: str):
 
     # No local action
     return True, "", None, text
+
+
+
+# ================= Entry Point =================
+
+if __name__ == "__main__":
+    str = handle_local_command("get me a story.")
+    print(str)
+    
