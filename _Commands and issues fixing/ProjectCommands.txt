@@ -30,11 +30,11 @@ pip config set global.extra-index-url https://pypi.org/simple
 git clone https://github.com/TheAlchimest/Robot_App.git
 python -m venv .venv
 source .venv/bin/activate
-pip install -r req.txt
+pip install -r requirements_windows.txt
 
 cd ~/apps/Robot_App_05_Zero
 source .venv/bin/activate
-python main.py
+python main_single.py
 =========================
 sudo raspi-config
 sudo poweroff
