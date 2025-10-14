@@ -179,7 +179,7 @@ def play_sound(file_path):
 
 # ------------------- Main Function -------------------
 def main_thread():
-    pygame.init()
+    # pygame.init()
 
     print("="*60)
     print("🚀 AI Assistant Started — Wake Word: Ziko / زيكو")
