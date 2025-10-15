@@ -9,6 +9,7 @@ from speech_to_text_windows import SpeechToText
 from text_to_speech_windows import TextToSpeech
 from ai_n8n import N8nClient
 #import eye_runner as eye
+import eye_runner_zero as eye
 import pygame
 import os
 import re
@@ -374,23 +375,6 @@ def main_thread():
     cleanup()
     print("✅ System stopped successfully.")
 
-def audio_thread():
-    while system_state.is_active:
-        try:
-            text = audio_queue.get(timeout=1)
-            if text:
-                print(f"\n🤖 tts: {text}")
-                system_state.set_speaking(True)
-                play_sound(text)
-                system_state.set_speaking(False)
-                print("✅ Finished speaking\n")
-        except Empty:
-            continue
-        except Exception as e:
-            print(f"❌ Text-to-speech error: {e}")
-            system_state.set_speaking(False)
-        finally:
-            system_state.set_speaking(False)
 
 # ================= Main Function =================
 def main():
@@ -400,7 +384,7 @@ def main():
     # Create and start threads
     threads = [
         threading.Thread(target=interruption_thread, daemon=True, name="InteruptionThread"),
-        threading.Thread(target=audio_thread, daemon=True, name="AudioMessagesSpeech"),
+        threading.Thread(target=eye.run, daemon=True, name="eye"),
         threading.Thread(target=main_thread, daemon=True, name="MainThread")
     ]
     
