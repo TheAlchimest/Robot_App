@@ -80,6 +80,7 @@ class N8nClient:
                     # النص العادي
                     output = resp.text.strip()
                     print(f"[n8n] ✅ Response (text) in {elapsed:.2f}s")
+                    print(f"[n8n] ✅ Response (text) in {resp}")
                     return output
 
                 # ✅ محاولة استخراج الرد من JSON

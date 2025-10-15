@@ -344,7 +344,7 @@ def main_thread():
                     system_state.resume_interruption()
                     # tell user that we are thinking now untill we got response from AI 
                     # audio_player.play_blocking("Resources/voice_msgs/thinking.wav")
-                    audio_player.play_async(audio_queue, "Resources/voice_msgs/thinking.wav")
+                    audio_player.play_async("Resources/voice_msgs/thinking.wav")
                     print("🤔 Processing with AI...")
 
                     # NOTE: pass_text (if greetings trimmed) else remainder
@@ -354,7 +354,7 @@ def main_thread():
                         print(f"🤖 AI Response: {ai_response}")
                         # tell user that we got answer untill we convert the AI response into sound
                         # audio_player.play_blocking("Resources/voice_msgs/got_it.wav")
-                        audio_player.play_async(audio_queue, "Resources/voice_msgs/got_it.wav")
+                        audio_player.play_async("Resources/voice_msgs/got_it.wav")
                         # convert the AI response into sound
                         speak_safe(ai_response)
             
