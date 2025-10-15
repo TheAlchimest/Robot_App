@@ -1,0 +1,77 @@
+﻿# ==========================================
+# AI ROBOT - OPTIMIZED DEPENDENCIES
+# ==========================================
+# Core AI & Speech Libraries
+elevenlabs==2.16.0
+
+# === Core HTTP (Required) ===
+requests==2.32.3
+urllib3==2.2.1
+
+# === Audio Recording ===
+# Try PyAudio first (best performance)
+pyaudio==0.2.14
+
+# === Audio Playback (choose one or install all) ===
+# ALSA (recommended for Raspberry Pi - fastest)
+#pyalsaaudio==0.10.0
+pyalsaaudio==0.10.0 ; sys_platform == "linux"
+
+# pygame (fallback - slower but more compatible)
+pygame==2.6.1
+
+# aplay via alsa-utils (system package):
+# sudo apt-get install alsa-utils
+
+# === VAD (Voice Activity Detection) ===
+# WebRTC VAD for silence trimming (recommended)
+webrtcvad==2.0.10
+
+# === Vision (optional - for face tracking) ===
+# Uncomment if you need eye tracking/face detection
+# opencv-python==4.10.0.84
+# mediapipe==0.10.18
+# cvzone==1.6.1
+
+# === Utilities ===
+numpy>=1.24.0
+
+# Environment & Configuration
+python-dotenv==1.0.1
+
+# ==========================================
+# INSTALLATION NOTES
+# ==========================================
+
+# 1. Update system packages first:
+#    sudo apt-get update
+#    sudo apt-get upgrade
+
+# 2. Install system dependencies for audio:
+#    sudo apt-get install portaudio19-dev python3-pyaudio
+#    sudo apt-get install libasound2-dev
+#    sudo apt-get install alsa-utils
+
+# 3. (Optional) Install ffmpeg for faster audio processing:
+#    sudo apt-get install ffmpeg
+
+# 4. Install Python packages:
+#    pip install -r requirements.txt
+
+# 5. Test audio:
+#    arecord -l    # list recording devices
+#    aplay -l      # list playback devices
+
+# ==========================================
+# TROUBLESHOOTING
+# ==========================================
+
+# If PyAudio fails to install:
+#   pip install --global-option='build_ext' --global-option='-I/usr/local/include' --global-option='-L/usr/local/lib' pyaudio
+
+# If pyalsaaudio fails:
+#   sudo apt-get install libasound2-dev
+#   pip install pyalsaaudio
+
+# For Raspberry Pi optimization:
+#   sudo apt-get install python3-numpy  # use system numpy (faster)

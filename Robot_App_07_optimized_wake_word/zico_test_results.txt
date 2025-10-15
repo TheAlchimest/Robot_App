@@ -1,196 +1,65 @@
-        tts.say(text)
-20:Dico.
-(.venv) PS C:\Repos\Robotics\Robot_App\Robot_App_07_optimized_wake_word> python zico.py
-pygame 2.6.1 (SDL 2.28.4, Python 3.10.0)
-Hello from the pygame community. https://www.pygame.org/contribute.html
-Listening ...
-[STT] 📤 Transcribing 24044 bytes...
-[STT] ✅ Transcription: Zico.
 
-1:Zico.
-Listening ...
-[STT] 📤 Transcribing 33644 bytes...
-[STT] ✅ Transcription: Zico.
+1:Zico
+2:Zico
+3:Dico
+4:Zico
+5:Zico
+6:Nico
+7:Zico
+8:Zico
+9:Zico
+10:Zico
+11:Zico
+12:Zico
+13:Zico
+14:Zico
+15:Zico
+16:Zico
+17:Zico
+18:Zico
+19:Dziko
+20:Zico
+21:Zico
+22:Zico
+23:Zico
+24:Zico
+25:Zico
+26:Zico
+27:Zico
+28:Zico
+29:Zico
+30:Zico
+31:Zico
+32:Ziko
+33:Zico
+34:Zico
+35:Zico
+36:Zico
+37:Zico
+38:Ziko
+39:Zico
+40:Zico
+41:Zico
+42:Zico
+43:Zico
+44:Zico
+45:Zico
+46:Zico
+47:Zico
+48:Zico
+49:Ziko
+50:Zico
+51:Zico
+52:Zico
+53:Zico
+54:Zico
+55:Zico
 
-2:Zico.
-Listening ...
-[STT] 📤 Transcribing 58604 bytes...
-[STT] ✅ Transcription: They call it the "ziko" Zika Virus.
+===================================
+Execluded results (realy far)
+===================================
+15:vehicle
+21:Music
+3:They call it the "ziko" Zika Virus
+20:Speaker 1:
 
-3:They call it the "ziko" Zika Virus.
-Listening ...
-[STT] 📤 Transcribing 25004 bytes...
-[STT] ✅ Transcription: Zico.
-
-4:Zico.
-Listening ...
-[STT] 📤 Transcribing 24044 bytes...
-[STT] ✅ Transcription: Zico.
-
-5:Zico.
-Listening ...
-[STT] 📤 Transcribing 25964 bytes...
-[STT] ✅ Transcription: Nico.
-
-6:Nico.
-Listening ...
-[STT] 📤 Transcribing 26924 bytes...
-[STT] ✅ Transcription: Zico.
-
-7:Zico.
-Listening ...
-[STT] 📤 Transcribing 25964 bytes...
-[STT] ✅ Transcription: Zico.
-
-8:Zico.
-Listening ...
-[STT] 📤 Transcribing 26924 bytes...
-[STT] ✅ Transcription: 5.
-
-9:5.
-Listening ...
-[STT] 📤 Transcribing 28844 bytes...
-[STT] ✅ Transcription: Zico.
-
-10:Zico.
-Listening ...
-[STT] 📤 Transcribing 25004 bytes...
-[STT] ✅ Transcription: Zico.
-
-11:Zico.
-Listening ...
-[STT] 📤 Transcribing 138284 bytes...
-[STT] ✅ Transcription: Zico.
-
-12:Zico.
-Listening ...
-[STT] 📤 Transcribing 25964 bytes...
-[STT] ✅ Transcription: Zico.
-
-13:Zico.
-Listening ...
-[STT] 📤 Transcribing 27884 bytes...
-[STT] ✅ Transcription: Zico.
-
-14:Zico.
-Listening ...
-[STT] 📤 Transcribing 31724 bytes...
-[STT] ✅ Transcription: Zico.
-
-15:Zico.
-Listening ...
-[STT] 📤 Transcribing 26924 bytes...
-[STT] ✅ Transcription: Zico.
-
-16:Zico.
-Listening ...
-[STT] 📤 Transcribing 29804 bytes...
-[STT] ✅ Transcription: Zico.
-
-17:Zico.
-Listening ...
-[STT] 📤 Transcribing 27884 bytes...
-[STT] ⚠️ Empty transcription received
-Listening ...
-[STT] 📤 Transcribing 63404 bytes...
-[STT] ✅ Transcription: Dziko.
-
-19:Dziko.
-Listening ...
-[STT] 📤 Transcribing 53804 bytes...
-[STT] ✅ Transcription: Zico.
-
-20:Zico.
-Listening ...
-[STT] 📤 Transcribing 41324 bytes...
-[STT] ✅ Transcription: Zico.
-
-21:Zico.
-Listening ...
-[STT] 📤 Transcribing 34604 bytes...
-[STT] ✅ Transcription: Zico.
-
-22:Zico.
-Listening ...
-[STT] 📤 Transcribing 40364 bytes...
-[STT] ✅ Transcription: Zico.
-
-23:Zico.
-Listening ...
-[STT] 📤 Transcribing 50924 bytes...
-[STT] ✅ Transcription: Zico.
-
-24:Zico.
-Listening ...
-[STT] 📤 Transcribing 41324 bytes...
-[STT] ✅ Transcription: Zico.
-
-25:Zico.
-Listening ...
-[STT] 📤 Transcribing 42284 bytes...
-[STT] ✅ Transcription: Zico.
-
-26:Zico.
-Listening ...
-[STT] 📤 Transcribing 38444 bytes...
-[STT] ✅ Transcription: Zico?
-
-27:Zico?
-Listening ...
-[STT] 📤 Transcribing 40364 bytes...
-[STT] ✅ Transcription: Zico.
-
-28:Zico.
-Listening ...
-[STT] 📤 Transcribing 43244 bytes...
-[STT] ✅ Transcription: Zico.
-
-29:Zico.
-Listening ...
-[STT] 📤 Transcribing 37484 bytes...
-[STT] ✅ Transcription: Zico.
-
-30:Zico.
-Listening ...
-[STT] 📤 Transcribing 123884 bytes...
-[STT] ✅ Transcription: Zico.
-
-31:Zico.
-Listening ...
-[STT] 📤 Transcribing 810284 bytes...
-[STT] ✅ Transcription: Ziko. Ziko. Ziko. Ziko. Ziko. Ziko.
-
-32:Ziko. Ziko. Ziko. Ziko. Ziko. Ziko.
-Listening ...
-[STT] 📤 Transcribing 30764 bytes...
-[STT] ✅ Transcription: Zico.
-
-33:Zico.
-Listening ...
-[STT] 📤 Transcribing 35564 bytes...
-[STT] ✅ Transcription: Zico.
-
-34:Zico.
-Listening ...
-[STT] 📤 Transcribing 34604 bytes...
-[STT] ✅ Transcription: Zico.
-
-35:Zico.
-Listening ...
-[STT] 📤 Transcribing 27884 bytes...
-[STT] ✅ Transcription: Zico.
-
-36:Zico.
-Listening ...
-[STT] 📤 Transcribing 34604 bytes...
-[STT] ✅ Transcription: Zico.
-
-37:Zico.
-Listening ...
-
-1:Zico?
-Listening ...
-[STT] 📤 Transcribing 590444 bytes...
-[STT] ✅ Transcription: Ziko. Ziko. Ziko. Ziko. Ziko. Ziko.
-
-2:Ziko. Ziko. Ziko. Ziko. Ziko. Ziko.

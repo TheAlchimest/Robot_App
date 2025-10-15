@@ -35,6 +35,7 @@ pip install -r requirements_windows.txt
 cd ~/apps/Robot_App_05_Zero
 source .venv/bin/activate
 python main_single.py
+python zico.py
 =========================
 sudo raspi-config
 sudo poweroff

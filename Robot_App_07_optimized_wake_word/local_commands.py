@@ -42,12 +42,12 @@ _AR_VOC = r"(?:يا)\s*"
 # Build patterns (start-of-utterance only)
 WAKE_PATTERN_EN = re.compile(rf"^\s*(?:{_EN_VOC})?{_EN_WAKE}\b[\s،,:-]*", re.IGNORECASE)
 # نطبع بنسخة طبيعية ثم نطابق العربية على النصّ المُطبّع
-WAKE_PATTERN_AR = re.compile(rf"^\s*(?:{_AR_VOC})?سولي\b[\s،,:-]*", re.IGNORECASE)
+WAKE_PATTERN_AR = re.compile(rf"^\s*(?:{_AR_VOC})?زيكو\b[\s،,:-]*", re.IGNORECASE)
 
 def extract_after_wake(user_text: str):
     """
     Returns (has_wake: bool, remainder: str, wake_form: str)
-    - Detects 'Soly' variants in EN, and 'سولي' (with optional 'يا') in AR.
+    - Detects 'Zico' variants in EN, and 'زيكو' (with optional 'يا') in AR.
     - Only detects at the BEGINNING of the text.
     """
     text = (user_text or "").strip()
@@ -64,10 +64,10 @@ def extract_after_wake(user_text: str):
     m_ar = WAKE_PATTERN_AR.match(norm)
     if m_ar:
         # Approximate slicing by applying same regex on original with flexible chars
-        # Accept forms: "يا سولي", "سولي"
+        # Accept forms: "يا زيكو", "زيكو"
         m_orig = re.match(r"^\s*(?:يا\s*)?زيكو\b[\s،,:-]*", text, re.IGNORECASE)
         end_idx = m_orig.end() if m_orig else len(text)
-        return True, text[end_idx:].strip(), (m_orig.group(0).strip() if m_orig else "سولي")
+        return True, text[end_idx:].strip(), (m_orig.group(0).strip() if m_orig else "زيكو")
 
     return False, "", ""
 
