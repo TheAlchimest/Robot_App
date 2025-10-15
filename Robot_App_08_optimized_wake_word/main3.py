@@ -71,63 +71,6 @@ def safe_put(q, item):
             pass
         q.put_nowait(item)
 
-# ------------------- Arabic normalization -------------------
-# We normalize Arabic input to make stop-word detection resilient to diacritics/variants.
-_AR_DIACRITICS = re.compile(r'[\u0617-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]')
-def _normalize_ar(text: str) -> str:
-    """
-    Lowercases, strips diacritics/elongations, and normalizes common Arabic letter variants.
-    """
-    if not text:
-        return ""
-    text = text.strip().lower()
-    text = _AR_DIACRITICS.sub('', text)
-    text = text.replace('ـ', '')      # kashida
-    for src in 'أإآٱ':
-        text = text.replace(src, 'ا')  # alef variants -> alef
-    text = text.replace('ة', 'ه')      # ta marboota -> ha
-    text = text.replace('ى', 'ي')      # alef maqsura -> ya
-    return text
-
-# Stop tokens accepted at the start of an utterance (after optional wake word).
-STOP_TOKENS = [
-    # English
-    "stop", "end", "cancel", "enough", "quit", "exit", "abort", "halt",
-    # Arabic (common forms)
-    "قف", "توقف", "وقف", "بس", "خلص", "خلاص", "كفايه", "كفاية",
-    "ستوب", "وقف التشغيل", "اسكت", "كفا", "خلصنا", "خلاص كده",
-]
-
-# Boundary pattern: allow stop token followed by whitespace, EOS, or non-word char.
-_BOUNDARY = r'(?:\s|$|[^\w\u0600-\u06FF])'
-# Regex matches any stop token at the *beginning* of string (after possible spaces).
-STOP_RE = re.compile(r'^\s*(?:' + '|'.join(map(re.escape, STOP_TOKENS)) + r')' + _BOUNDARY, re.IGNORECASE)
-
-def is_stop_command(text: str) -> bool:
-    """
-    True if the text begins with a stop token (Arabic or English).
-    We also test after Arabic normalization to catch minor spelling variants.
-    """
-    if not text:
-        return False
-    n = _normalize_ar(text)
-    return bool(STOP_RE.search(text) or STOP_RE.search(n))
-
-def is_stop_with_optional_wake(text: str) -> bool:
-    """
-    True if the input is a stop command either:
-    - directly (e.g., "stop", "وقف"), OR
-    - after a wake word (e.g., "Ziko stop", "زيكو وقف").
-    """
-    if not text:
-        return False
-    try:
-        has_wake, remainder, _wake = extract_after_wake(text)
-    except Exception:
-        has_wake, remainder = False, None
-    candidate = remainder if has_wake else text
-    return is_stop_command(candidate)
-
 # ------------------- TTS + Sound Abstraction -------------------
 class SpeechBus:
     """

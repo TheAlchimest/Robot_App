@@ -36,7 +36,7 @@ DATE_PATTERNS = {
 }
 
 PAUSE_PATTERNS = {
-    'english': ['pause', 'stop listening', 'sleep mode', 'go to sleep', 'standby', 'rest'],
+    'english': ['pause','stop', 'stop listening', 'sleep mode', 'go to sleep', 'standby', 'rest'],
     'arabic':  ['توقف', 'نام', 'ايقاف مؤقت', 'استراحة', 'ارتاح']
 }
 

@@ -8,7 +8,7 @@ from audio_recorder import AudioRecorder
 from speech_to_text_windows import SpeechToText
 from text_to_speech_windows import TextToSpeech
 from ai_n8n import N8nClient
-from local_commands_ultra_fast import handle_local_command, extract_after_wake
+from local_commands import handle_local_command, extract_after_wake
 import pygame
 import os
 import re
