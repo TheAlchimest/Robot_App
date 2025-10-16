@@ -1,0 +1,191 @@
+{
+  "name": "Robot_05",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a39a2dc9-05b9-4959-a33a-4934307063f5",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -112
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -768,
+        -160
+      ],
+      "id": "18bc33ad-f5c0-45fd-8f07-255c54a1b7ea",
+      "name": "When chat message received",
+      "webhookId": "b6bfdf59-9364-4b78-86b4-98e68fc79b77"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        -112
+      ],
+      "id": "7341bdc8-254d-4b8c-afd5-ab8950a4836a",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        96
+      ],
+      "id": "ebd03a7a-fb00-49b2-9772-d5d987826281",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "BY7WuCcXzNgbEfad",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        128,
+        96
+      ],
+      "id": "b066b73d-e33c-4de2-b7e8-e70ce0489e42",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {},
+      "id": "cd015fce-1ce9-480d-9676-75c8700ec9d2",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -768,
+        16
+      ],
+      "webhookId": "64d060bc-5ca4-4520-afac-ecf2e39675a2"
+    },
+    {
+      "parameters": {},
+      "name": "GetDataFromWebhook",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        -16
+      ],
+      "id": "3622c7b2-7ad4-4031-9968-844b9651fb59"
+    },
+    {
+      "parameters": {},
+      "name": "GetDataFromWebhook1",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        -160
+      ],
+      "id": "2fec4993-e00b-4b63-b99e-1a5d55e96ff7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "GetDataFromWebhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "GetDataFromWebhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetDataFromWebhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetDataFromWebhook1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "84ec6e83-fe5f-48e3-9254-7348ca685d17",
+  "meta": {
+    "instanceId": "9cccf600c2aaab93448f977963450a62dee56e84126e400596e2b39bb6ac38f5"
+  },
+  "id": "YJylkBIEfTsI9dwq",
+  "tags": []
+}
